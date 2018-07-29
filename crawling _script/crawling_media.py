@@ -7,6 +7,7 @@ Created on Mon May 28 21:49:49 2018
 
 import os
 import tqdm
+import pandas as pd
 
 from utils_crawling import start, multiprocess_crawling
 
@@ -21,7 +22,6 @@ def parcourir_liste(driver, set_to_see, set_seen):
         set_to_see = set_to_see.union(article_links) - set_seen
         set_seen = set_seen.union(set([article]))
         print("to see : {0} seen : {1}".format(len(set_to_see), len(set_seen)))
-        print(set_to_see)
         
     return set_to_see, set_seen
     
@@ -32,7 +32,7 @@ def extract_links(driver):
     """
     liste_articles = set()
     html = driver.find_elements_by_xpath("//a[@href]")
-    for a in tqdm.tqdm(html):
+    for a in html:#tqdm.tqdm(html):
         try:
             b = a.get_attribute('href') 
             if '2018/07' in b:
@@ -42,33 +42,31 @@ def extract_links(driver):
                 
     return liste_articles 
 
-
-def extract_url_articles(liste_urls):
+def while_per_url(liste_url, additionnal_path):
     """
     Iterate over all urls to crawl and call parcourir list function
      - Input : Liste of websites url to crawl
      - Output: Dictionnary shape : {website : [URLS], ...}
     """
     
-    dico_links = {}
-    for url in liste_urls:
+    driver = start()
+    for url in liste_url:
         
         ### init liste and driver for each url to crawl
-        driver = start()
         set_to_see=set([url])
         set_seen= set()
         
         ### crawl urls and append them to final list
         while len(set_to_see)>0:
             set_to_see, set_seen = parcourir_liste(driver, set_to_see, set_seen)
-            
-        dico_links[url] = list(set_seen)
-        driver.close()
-        
-    return dico_links
+        pd.DataFrame(list(set_seen)).to_csv(additionnal_path+ "/url_{0}.csv".format(url.replace("https://","").replace("/","")))
+    driver.close()
+
 
 if __name__ == "__main__":
     os.environ["DIR_PATH"] = r"C:\Users\User\Documents\Alexs"
-    liste_urls = ["https://www.lemonde.fr/"]
-    extracted_links = extract_url_articles(liste_urls)
+    liste_urls = ["https://www.lemonde.fr/", "http://www.lefigaro.fr/", "https://www.lesechos.fr/",
+                  "https://www.mediapart.fr/", "http://www.liberation.fr/", "https://www.latribune.fr/"]
     
+    save_path = os.environ["DIR_PATH"] + "/data"
+    multiprocess_crawling(while_per_url, liste_urls, save_path, ncore=6)

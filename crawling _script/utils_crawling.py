@@ -32,10 +32,10 @@ def multiprocess_crawling(function, data_liste_matches, additionnal_path, ncore)
 
     for i in range(nbr_core):
         
-        sub_liste_refs = data_liste_matches.iloc[int(i*len(data_liste_matches)/nbr_core): int((i+1)*len(data_liste_matches)/nbr_core)]
+        sub_liste_refs = data_liste_matches[int(i*len(data_liste_matches)/nbr_core): int((i+1)*len(data_liste_matches)/nbr_core)]
         if i == nbr_core -1:
-            sub_liste_refs = data_liste_matches.iloc[int(i*len(data_liste_matches)/nbr_core): ]
+            sub_liste_refs = data_liste_matches[int(i*len(data_liste_matches)/nbr_core): ]
             
-        p = multiprocessing.Process(target=function, args=(sub_liste_refs, additionnal_path, i, ))
+        p = multiprocessing.Process(target=function, args=(sub_liste_refs, additionnal_path,))
         jobs.append(p)
         p.start()
