@@ -18,7 +18,7 @@ except Exception:
     sys.path.append(os.environ["DIR_PATH"] + "/script/crawling_script")
     from crawling import Crawling
 
-class LemondeScrapping(Crawling):
+class LesechosScrapping(Crawling):
     
     def __init__(self, min_date):
     
@@ -26,15 +26,14 @@ class LemondeScrapping(Crawling):
         self.url= "https://www.lemonde.fr/"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
-        self.main_lemonde()
+        self.main_lesechos()
 
-    def main_lemonde(self):
+    def main_lesechos(self):
         """
         Main function initializing threads and the list of root urls to crawl
         Once one root url has been crawled, all drivers are closed and then reopened
         The queue_url element has to be empty in order to move to another root url
         """
-        
         self.driver.get(self.url)
         liste_menu_href = self.get_lis_from_nav("id","navigation-generale")
         liste_menu_href = [x for x in liste_menu_href if x not in [self.url, 
@@ -46,14 +45,13 @@ class LemondeScrapping(Crawling):
                                                                   'https://www.lemonde.fr/data/',
                                                                   'https://www.lemonde.fr/guides-d-achat/']]   
         for element in liste_menu_href:
-            print(element)
-            self.start_threads_and_queues(self.lemonde_article_information)
             t0 = time.time()
+            self.start_threads_and_queues(self.lemonde_article_information)
             self.get_max_pages(element)
             print('*** Main thread waiting')
             self.queues["urls"].join()
             print('*** Done in {0}'.format(time.time() - t0))
-            self.save_results(element)
+        self.close_queue_drivers()
   
     
     def lemonde_article_information(self, driver):
@@ -105,7 +103,7 @@ class LemondeScrapping(Crawling):
          pagination = self.driver.find_element_by_xpath("//div[@class='conteneur_pagination']")
          last_page = pagination.find_element_by_class_name("adroite").text
          
-         cap_articles = (datetime.now() - self.end_date).days*2
+         cap_articles = (datetime.now() - self.end_date).days*20
           
          if last_page.isdigit():
              max_pages = min(int(last_page), cap_articles)
@@ -120,5 +118,5 @@ class LemondeScrapping(Crawling):
 
 ### test unitaire
 if __name__ == "__main__":
-    lemonde = LemondeScrapping()
+    lesechos = LesechosScrapping()
     

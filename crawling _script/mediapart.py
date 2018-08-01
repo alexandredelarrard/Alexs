@@ -43,7 +43,6 @@ class MediapartScrapping(Crawling):
             print('*** Main thread waiting')
             self.queues["urls"].join()
             print('*** Done in {0}'.format(time.time() - t0))
-        self.close_queue_drivers()
 
             
     def mediapart_article_information(self, driver):
@@ -84,7 +83,7 @@ class MediapartScrapping(Crawling):
          pagination = self.driver.find_element_by_xpath("//ul[@class='pager']")
          last_page = pagination.find_element_by_class_name("pager-last").text
          
-         cap_articles = (datetime.now() - self.end_date).days*20
+         cap_articles = (datetime.now() - self.end_date).days*3
          
          if last_page.isdigit():
              max_pages = min(int(last_page), cap_articles)

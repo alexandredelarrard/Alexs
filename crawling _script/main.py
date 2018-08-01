@@ -31,6 +31,7 @@ def main():
     LemondeScrapping(min_date)
     MediapartScrapping(min_date)
     LefigaroScrapping(min_date)
+    
 
 if __name__ == "__main__":
      environment_variables()
