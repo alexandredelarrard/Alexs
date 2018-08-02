@@ -23,15 +23,16 @@ class LesechosScrapping(Crawling):
     def __init__(self, min_date, queues, driver):
     
         Crawling.__init__(self)
-        self.url= "lesechos"
+        self.url= "https://www.lesechos.fr/recherche/"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
         self.driver = driver
         self.queues = queues
         self.main_lesechos()
 
-
     def main_lesechos(self):
+        
+        print("_"*40 + "\n\n" + "*"*15 + "  Les echos  " + "*"*15 + "\n"+ "_"*40 )
         
         t0 = time.time()
         self.start_threads_and_queues(self.lesechos_article_information)

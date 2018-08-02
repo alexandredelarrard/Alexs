@@ -30,12 +30,15 @@ class LemondeScrapping(Crawling):
         self.queues = queues
         self.main_lemonde()
 
+
     def main_lemonde(self):
         """
         Main function initializing threads and the list of root urls to crawl
         Once one root url has been crawled, all drivers are closed and then reopened
         The queue_url element has to be empty in order to move to another root url
         """
+        
+        print("_"*40 + "\n\n" + "*"*15 + "  Le monde  " + "*"*15 + "\n"+ "_"*40 )
         
         self.driver.get(self.url)
         liste_menu_href = self.get_lis_from_nav("id","navigation-generale")

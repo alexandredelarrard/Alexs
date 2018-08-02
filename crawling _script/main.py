@@ -49,8 +49,8 @@ class MainUrl(object):
         
         ### crawl each competitor
         MediapartScrapping(self.end_date, self.queues, self.driver)
-        LefigaroScrapping(self.end_date, self.queues, self.driver)
         LesechosScrapping(self.end_date, self.queues, self.driver)
+        LefigaroScrapping(self.end_date, self.queues, self.driver)
         LemondeScrapping(self.end_date, self.queues, self.driver)
         
 

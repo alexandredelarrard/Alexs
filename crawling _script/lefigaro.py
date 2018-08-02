@@ -33,6 +33,8 @@ class LefigaroScrapping(Crawling):
 
     def main_lefigaro(self):
         
+        print("_"*40 + "\n\n" + "*"*15 + "  Le figaro  " + "*"*15 + "\n"+ "_"*40 )
+        
         t0 = time.time()
         self.start_threads_and_queues(self.mediapart_article_information)
         self.get_max_pages()

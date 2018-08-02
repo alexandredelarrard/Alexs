@@ -97,7 +97,7 @@ class Crawling(object):
     def save_results(self, url):
         
         #### if reached the min date then empty the queue of urls and save all results 
-        path_name = os.environ["DIR_PATH"] + "/data/{0}_{1}.csv".format(re.sub(r'(https|http)://?', '', os.path.dirname(url)).replace("www.","").replace(".fr","").replace(".", ""), datetime.now().strftime("%Y-%m-%d"))
+        path_name = os.environ["DIR_PATH"] + "/data/{0}_{1}.csv".format(re.sub(r'(https|http)://?', '', url).replace("www.","").replace(".fr","").replace(".", ""), datetime.now().strftime("%Y-%m-%d"))
 
         if not os.path.isdir(os.environ["DIR_PATH"] + "/data"):
             os.mkdir(os.environ["DIR_PATH"] + "/data")

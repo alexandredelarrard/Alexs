@@ -32,12 +32,16 @@ class MediapartScrapping(Crawling):
 
     def main_mediapart(self):
         
+        print("_"*40 + "\n\n" + "*"*15 + "  Mediapart  " + "*"*15 + "\n"+ "_"*40 )
+        
         self.driver.get(self.url)
         liste_menu_href = self.get_lis_from_nav("class","main-menu")
         liste_menu_href = [x for x in liste_menu_href if x not in [self.url, 
                                                                    '/studio'
                                                                    '//blogs.mediapart.fr/',
-                                                                   '//blogs.mediapart.fr/edition/le-club-mode-demploi']]   
+                                                                   '//blogs.mediapart.fr/edition/le-club-mode-demploi',
+                                                                   'https://blogs.mediapart.fr/',
+                                                                   'https://www.mediapart.fr/studio']]   
         for element in liste_menu_href:
             try:
                 self.start_threads_and_queues(self.mediapart_article_information)
