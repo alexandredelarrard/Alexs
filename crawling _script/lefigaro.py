@@ -67,17 +67,12 @@ class LefigaroScrapping(Crawling):
 
         information = np.array(np.transpose([x for x in [liste_times, liste_href, liste_text] if x != []]))
         
-        try:
-            assert len(liste_times) == len(liste_href) == len(liste_text)
-        except AssertionError:
-            pass
-        
         return information
             
 
     def get_max_pages(self):
         
-         self.driver.get(self.url)
+         self.driver = self.handle_timeout(self.driver, self.url)
          delta = datetime.now() - self.end_date
          
          print("max pages to crawl for {0} : {1}".format(self.url, delta.days))

@@ -23,7 +23,7 @@ class LesechosScrapping(Crawling):
     def __init__(self, min_date, queues, driver):
     
         Crawling.__init__(self)
-        self.url= "https://www.lesechos.fr/recherche/"
+        self.url= "https://www.lesechos.fr/recherche"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
         self.driver = driver
@@ -73,7 +73,7 @@ class LesechosScrapping(Crawling):
     def get_max_pages(self):
         
          url = "http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&"
-         self.driver.get(url + "date1={0}&date2={1}&page=1".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d")))
+         self.driver = self.handle_timeout(self.driver, url + "date1={0}&date2={1}&page=1".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d")))
          pagination = self.driver.find_element_by_xpath("//div[@class='main-content content-page']/header/div")
          last_page = pagination.text.split("sur")[1].replace("résultats","").strip().replace(" ","")
         

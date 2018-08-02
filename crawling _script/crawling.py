@@ -38,7 +38,7 @@ class Crawling(object):
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
-        driver.set_page_load_timeout(50)     
+        driver.set_page_load_timeout(100)     
         return driver
 
 
@@ -70,12 +70,7 @@ class Crawling(object):
             driver = queues["drivers"].get()
             url = queue_url.get()
             
-            try:
-                driver.get(url)
-            except Exception:
-                driver.close()
-                driver = self.initialize_driver()
-                driver.get(url)
+            self.handle_timeout(driver, url)
                 
             information = function(driver)
             
@@ -93,6 +88,17 @@ class Crawling(object):
                          queue_url.get()
                          queue_url.task_done()
                      
+    def handle_timeout(self, driver, url):
+        
+        try:
+            driver.get(url)
+        except Exception:
+            driver.Quit()
+            driver = self.initialize_driver()
+            self.handle_timeout(driver)
+        
+        return driver
+            
             
     def save_results(self, url):
         
@@ -103,7 +109,7 @@ class Crawling(object):
             os.mkdir(os.environ["DIR_PATH"] + "/data")
             
         if not os.path.isdir(os.path.dirname(path_name)):
-            os.mkdir(os.path.dirname(path_name))
+            os.makedirs(os.path.dirname(path_name))
             
         if os.path.isfile(path_name):
             os.remove(path_name)

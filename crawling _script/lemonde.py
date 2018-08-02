@@ -99,11 +99,6 @@ class LemondeScrapping(Crawling):
              
         information = np.array(np.transpose([x for x in [liste_times, liste_href, liste_text] if x != []]))
         
-        try:
-            assert len(liste_times) == len(liste_href) == len(liste_text)
-        except AssertionError:
-            pass
-        
         return information
             
         
@@ -113,7 +108,7 @@ class LemondeScrapping(Crawling):
          Depending on the number of days to crawl, the max_number of pages to crawl is capped
          """
          
-         self.driver.get(element+"1.html")
+         self.driver = self.handle_timeout(self.driver, element+"1.html")
          pagination = self.driver.find_element_by_xpath("//div[@class='conteneur_pagination']")
          last_page = pagination.find_element_by_class_name("adroite").text
          

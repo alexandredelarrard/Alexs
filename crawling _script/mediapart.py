@@ -37,7 +37,8 @@ class MediapartScrapping(Crawling):
         self.driver.get(self.url)
         liste_menu_href = self.get_lis_from_nav("class","main-menu")
         liste_menu_href = [x for x in liste_menu_href if x not in [self.url, 
-                                                                   '/studio'
+                                                                   '/studio',
+                                                                   '/journal/dossiers',
                                                                    '//blogs.mediapart.fr/',
                                                                    '//blogs.mediapart.fr/edition/le-club-mode-demploi',
                                                                    'https://blogs.mediapart.fr/',
@@ -82,16 +83,12 @@ class MediapartScrapping(Crawling):
 
         information = np.array(np.transpose([x for x in [liste_times, liste_href, liste_text] if x != []]))
         
-        try:
-            assert len(liste_times) == len(liste_href) == len(liste_text)
-        except AssertionError:
-            pass
-        
         return information
             
 
     def get_max_pages(self, element):
-         self.driver.get(element)
+        
+         self.driver = self.handle_timeout(self.driver, element)
          pagination = self.driver.find_element_by_xpath("//ul[@class='pager']")
          last_page = pagination.find_element_by_class_name("pager-last").text
          
