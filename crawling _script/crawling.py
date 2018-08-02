@@ -10,6 +10,7 @@ import pandas as pd
 import os
 import multiprocessing
 import time
+import re
 from datetime import datetime
 from queue import Queue
 from threading import Thread
@@ -93,17 +94,20 @@ class Crawling(object):
             queue_results.put(information)
             queue_url.task_done()
             
-            if self.check_in_date(information, url):
-                ### empty the queue of all its urls
-                while queue_url.qsize()>0:
-                     queue_url.get()
-                     queue_url.task_done()
+            if information.shape[0] > 0:
+                queue_results.put(information) 
+            
+                if self.check_in_date(information, url):
+                    ### empty the queue of all its urls
+                    while queue_url.qsize()>0:
+                         queue_url.get()
+                         queue_url.task_done()
                      
             
     def save_results(self, url):
         
         #### if reached the min date then empty the queue of urls and save all results 
-        path_name = os.environ["DIR_PATH"] + "/data/{0}_{1}.csv".format(os.path.dirname(url).replace("https://www.", "").replace(".fr",""), datetime.now().strftime("%Y-%m-%d"))
+        path_name = os.environ["DIR_PATH"] + "/data/{0}_{1}.csv".format(re.sub(r'(https|http)://?', '', os.path.dirname(url)).replace("www.","").replace(".fr","").replace(".", ""), datetime.now().strftime("%Y-%m-%d"))
 
         if os.path.isfile(path_name):
             os.remove(path_name)

@@ -5,13 +5,14 @@ Created on Thu Jul  5 11:30:04 2018
 @author: JARD
 """
 
+
 import os
 import configparser
 import platform
 from lemonde import LemondeScrapping
 from mediapart import MediapartScrapping
 from lefigaro import LefigaroScrapping
-
+from lesechos import LesechosScrapping
 
 def environment_variables():
     configParser = configparser.RawConfigParser() 
@@ -31,7 +32,7 @@ def main():
     LemondeScrapping(min_date)
     MediapartScrapping(min_date)
     LefigaroScrapping(min_date)
-    
+    LesechosScrapping(min_date)
 
 if __name__ == "__main__":
      environment_variables()

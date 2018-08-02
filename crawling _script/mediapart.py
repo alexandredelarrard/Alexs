@@ -37,12 +37,18 @@ class MediapartScrapping(Crawling):
                                                                    '//blogs.mediapart.fr/',
                                                                    '//blogs.mediapart.fr/edition/le-club-mode-demploi']]   
         for element in liste_menu_href:
-            t0 = time.time()
-            self.start_threads_and_queues(self.mediapart_article_information)
-            self.get_max_pages(element)
-            print('*** Main thread waiting')
-            self.queues["urls"].join()
-            print('*** Done in {0}'.format(time.time() - t0))
+            try:
+                self.start_threads_and_queues(self.mediapart_article_information)
+                t0 = time.time()
+                self.get_max_pages(element)
+                print('*** Main thread waiting')
+                self.queues["urls"].join()
+                print('*** Done in {0}'.format(time.time() - t0))
+                self.save_results(element)
+                
+            except Exception as e:
+                print(e)
+                print(element)
 
             
     def mediapart_article_information(self, driver):

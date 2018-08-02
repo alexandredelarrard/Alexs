@@ -7,7 +7,7 @@ Created on Thu Jul 26 16:26:58 2018
 
 import time
 import numpy as np
-import pandas as pd 
+import pandas as pd
 from datetime import datetime
 
 try:
@@ -23,100 +23,68 @@ class LesechosScrapping(Crawling):
     def __init__(self, min_date):
     
         Crawling.__init__(self)
-        self.url= "https://www.lemonde.fr/"
+        self.url= "lesechos"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
         self.main_lesechos()
 
+
     def main_lesechos(self):
-        """
-        Main function initializing threads and the list of root urls to crawl
-        Once one root url has been crawled, all drivers are closed and then reopened
-        The queue_url element has to be empty in order to move to another root url
-        """
-        self.driver.get(self.url)
-        liste_menu_href = self.get_lis_from_nav("id","navigation-generale")
-        liste_menu_href = [x for x in liste_menu_href if x not in [self.url, 
-                                                                  'https://www.lemonde.fr/pixels',
-                                                                  'https://www.lemonde.fr/teaser/presentation.html#xtor=CS1-263[BOUTONS_LMFR]-[BARRE_DE_NAV]-5-[Home]',
-                                                                  'https://www.lemonde.fr/grands-formats/',
-                                                                  'https://www.lemonde.fr/les-decodeurs/',
-                                                                  'https://www.lemonde.fr/videos/',
-                                                                  'https://www.lemonde.fr/data/',
-                                                                  'https://www.lemonde.fr/guides-d-achat/']]   
-        for element in liste_menu_href:
-            t0 = time.time()
-            self.start_threads_and_queues(self.lemonde_article_information)
-            self.get_max_pages(element)
-            print('*** Main thread waiting')
-            self.queues["urls"].join()
-            print('*** Done in {0}'.format(time.time() - t0))
-        self.close_queue_drivers()
-  
-    
-    def lemonde_article_information(self, driver):
-        """
-        function specific to each media
-        This function crawl all important information per url.
-        output :        - Date
-                        - url full article
-                        - Description in text such as title, small desc, autor, category
-        """
+        
+        t0 = time.time()
+        self.start_threads_and_queues(self.lesechos_article_information)
+        self.get_max_pages()
+        print('*** Main thread waiting')
+        self.queues["urls"].join()
+        print('*** Done in {0}'.format(time.time() - t0))
+        self.save_results(self.url)
+
+            
+    def lesechos_article_information(self, driver):
+
         # =============================================================================
         #  get all desired infromation of the list of articles : 20 per page       
         # =============================================================================
         ### liste time article appeared
-        times = driver.find_elements_by_xpath("//time[@class='grid_1 alpha']")
+        times = driver.find_elements_by_xpath("//article[@class='liste-article']/div/time")
         liste_times =[]
         for t in times:
             liste_times.append(t.get_attribute("datetime"))
         
         ### liste_href_articles
-        href = driver.find_elements_by_xpath("//div[@class='grid_11 conteneur_fleuve omega']/div/h3/a")
-        liste_href =[]
+        href = driver.find_elements_by_xpath("//article[@class='liste-article']/h2/a")
+        liste_href = []
         for h in href:
             liste_href.append(h.get_attribute("href"))
-        
-        ### text in each item article
-        nbr = driver.find_elements_by_tag_name("article")
+            
+        articles = driver.find_elements_by_xpath("//article[@class='liste-article']")
         liste_text = []
-        for comment in nbr:
-            liste_text.append(comment.text)
-             
+        for ar in articles:
+            liste_text.append(ar.text)
+
         information = np.array(np.transpose([x for x in [liste_times, liste_href, liste_text] if x != []]))
-        
-        try:
-            assert len(liste_times) == len(liste_href) == len(liste_text)
-        except AssertionError:
-            pass
-        
+
         return information
             
+
+    def get_max_pages(self):
         
-    def get_max_pages(self, element):
-         """
-         Fill in the queue of urls based on the maximum number of pages with same url root 
-         Depending on the number of days to crawl, the max_number of pages to crawl is capped
-         """
-         
-         self.driver.get(element+"1.html")
-         pagination = self.driver.find_element_by_xpath("//div[@class='conteneur_pagination']")
-         last_page = pagination.find_element_by_class_name("adroite").text
-         
-         cap_articles = (datetime.now() - self.end_date).days*20
-          
+         self.driver.get("http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&date1={0}&date2={1}&page=1".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d")))
+         pagination = self.driver.find_element_by_xpath("//div[@class='main-content content-page']/header/div")
+         last_page = pagination.text.split("sur")[1].replace("résultats","").strip().replace(" ","")
+        
          if last_page.isdigit():
-             max_pages = min(int(last_page), cap_articles)
+             max_pages = int(int(last_page)/10) # because 10 results per page
          else:
-             max_pages = 500
+             max_pages = 1
              
-         print("max pages to crawl for {0} : {1}".format(element, max_pages))
+         print("max pages to crawl for {0} : {1}".format(self.url, max_pages))
          #### fill the queue with all possible urls
          for i in range(1, max_pages+1):
-             self.queues["urls"].put(element+"{0}.html".format(i))
+             self.queues["urls"].put(self.url+ "&date1={0}&date2={1}&page={2}".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d"), i))
 
 
 ### test unitaire
 if __name__ == "__main__":
-    lesechos = LesechosScrapping()
+    lemonde = LesechosScrapping()
     

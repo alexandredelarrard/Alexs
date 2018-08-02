@@ -37,7 +37,7 @@ class LefigaroScrapping(Crawling):
         print('*** Main thread waiting')
         self.queues["urls"].join()
         print('*** Done in {0}'.format(time.time() - t0))
-
+        self.save_results(self.url)
             
     def mediapart_article_information(self, driver):
 
