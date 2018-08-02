@@ -9,10 +9,8 @@ from selenium import webdriver
 import pandas as pd
 import os
 import multiprocessing
-import time
 import re
 from datetime import datetime
-from queue import Queue
 from threading import Thread
 import numpy as np
 
@@ -23,10 +21,7 @@ class Crawling(object):
         
         self.id_col_date = 0
         self.end_date = pd.to_datetime("2018-07-01", format = "%Y-%m-%d")
-        self.cores = multiprocessing.cpu_count() - 1 ### allow a main thread
-        self.driver = self.initialize_driver()
-        self.initialize_queue_drivers()
-        self.queues = {"drivers" : self.driver_queue, "urls" :  Queue(), "results": Queue()}
+        self.cores = multiprocessing.cpu_count() - 1 
 
 
     def initialize_driver(self):
@@ -43,20 +38,8 @@ class Crawling(object):
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
-        driver.set_page_load_timeout(100)     
+        driver.set_page_load_timeout(50)     
         return driver
-    
-    
-    def initialize_queue_drivers(self):
-        self.driver_queue = Queue()
-        for i in range(self.cores):
-             self.driver_queue.put(self.initialize_driver())
-        
-    
-    def close_queue_drivers(self):
-        for i in range(self.driver_queue.qsize()):
-            driver = self.driver_queue.get()
-            driver.close()
 
 
     def get_lis_from_nav(self, class_id, id_ul):
@@ -86,10 +69,17 @@ class Crawling(object):
         while True:
             driver = queues["drivers"].get()
             url = queue_url.get()
-            driver.get(url)
+            
+            try:
+                driver.get(url)
+            except Exception:
+                driver.close()
+                driver = self.initialize_driver()
+                driver.get(url)
                 
             information = function(driver)
             
+            driver.delete_all_cookies()
             queues["drivers"].put(driver)
             queue_results.put(information)
             queue_url.task_done()
@@ -109,6 +99,12 @@ class Crawling(object):
         #### if reached the min date then empty the queue of urls and save all results 
         path_name = os.environ["DIR_PATH"] + "/data/{0}_{1}.csv".format(re.sub(r'(https|http)://?', '', os.path.dirname(url)).replace("www.","").replace(".fr","").replace(".", ""), datetime.now().strftime("%Y-%m-%d"))
 
+        if not os.path.isdir(os.environ["DIR_PATH"] + "/data"):
+            os.mkdir(os.environ["DIR_PATH"] + "/data")
+            
+        if not os.path.isdir(os.path.dirname(path_name)):
+            os.mkdir(os.path.dirname(path_name))
+            
         if os.path.isfile(path_name):
             os.remove(path_name)
             
@@ -128,11 +124,6 @@ class Crawling(object):
       
     def check_in_date(self, information, url):
         if min(pd.to_datetime(information[:,self.id_col_date])) < self.end_date:
-            root = os.environ["DIR_PATH"] + "/data"
-            if not os.path.isdir(root):
-                os.mkdir(root)
-            if not os.path.isdir(root + "/{0}".format(url.replace("https://www.", "").replace(".fr","").split("/")[0])):
-                os.mkdir(root + "/{0}".format(url.replace("https://www.", "").replace(".fr","").split("/")[0]))
             return True
         return False
     

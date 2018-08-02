@@ -20,12 +20,14 @@ except Exception:
 
 class LemondeScrapping(Crawling):
     
-    def __init__(self, min_date):
+    def __init__(self, min_date, queues, driver):
     
         Crawling.__init__(self)
         self.url= "https://www.lemonde.fr/"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
+        self.driver = driver
+        self.queues = queues
         self.main_lemonde()
 
     def main_lemonde(self):

@@ -20,12 +20,14 @@ except Exception:
 
 class LesechosScrapping(Crawling):
     
-    def __init__(self, min_date):
+    def __init__(self, min_date, queues, driver):
     
         Crawling.__init__(self)
         self.url= "lesechos"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
+        self.driver = driver
+        self.queues = queues
         self.main_lesechos()
 
 
@@ -69,7 +71,8 @@ class LesechosScrapping(Crawling):
 
     def get_max_pages(self):
         
-         self.driver.get("http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&date1={0}&date2={1}&page=1".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d")))
+         url = "http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&"
+         self.driver.get(url + "date1={0}&date2={1}&page=1".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d")))
          pagination = self.driver.find_element_by_xpath("//div[@class='main-content content-page']/header/div")
          last_page = pagination.text.split("sur")[1].replace("résultats","").strip().replace(" ","")
         
@@ -81,7 +84,7 @@ class LesechosScrapping(Crawling):
          print("max pages to crawl for {0} : {1}".format(self.url, max_pages))
          #### fill the queue with all possible urls
          for i in range(1, max_pages+1):
-             self.queues["urls"].put(self.url+ "&date1={0}&date2={1}&page={2}".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d"), i))
+             self.queues["urls"].put(url + "date1={0}&date2={1}&page={2}".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d"), i))
 
 
 ### test unitaire

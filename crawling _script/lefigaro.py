@@ -20,12 +20,14 @@ except Exception:
 
 class LefigaroScrapping(Crawling):
     
-    def __init__(self, min_date):
+    def __init__(self, min_date, queues, driver):
     
         Crawling.__init__(self)
         self.url= "http://articles.lefigaro.fr/"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
+        self.driver = driver
+        self.queues = queues
         self.main_lefigaro()
 
 

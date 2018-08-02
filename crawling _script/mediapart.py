@@ -20,12 +20,14 @@ except Exception:
 
 class MediapartScrapping(Crawling):
     
-    def __init__(self, min_date):
+    def __init__(self, min_date, queues, driver):
     
         Crawling.__init__(self)
         self.url= "https://www.mediapart.fr/"
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
         self.id_col_date = 0
+        self.driver = driver
+        self.queues = queues
         self.main_mediapart()
 
     def main_mediapart(self):
