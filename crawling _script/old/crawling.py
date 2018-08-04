@@ -9,19 +9,21 @@ from selenium import webdriver
 import pandas as pd
 import os
 import multiprocessing
+import re
 from datetime import datetime
-from queue import Queue
 from threading import Thread
 import numpy as np
-import glob
+
 
 class Crawling(object):
     
     def __init__(self):
-        self.id_col_date = 0
-        self.cores = multiprocessing.cpu_count() - 1 ### allow a main thread
-
         
+        self.id_col_date = 0
+        self.end_date = pd.to_datetime("2018-07-01", format = "%Y-%m-%d")
+        self.cores = multiprocessing.cpu_count() - 1 
+
+
     def initialize_driver(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
@@ -38,18 +40,19 @@ class Crawling(object):
         driver.delete_all_cookies()
         driver.set_page_load_timeout(100)     
         return driver
-    
-    
-    def initialize_queue_drivers(self):
-        self.driver_queue = Queue()
-        for i in range(self.cores):
-             self.driver_queue.put(self.initialize_driver())
-        
-    
-    def close_queue_drivers(self):
-        for i in range(self.driver_queue.qsize()):
-            driver = self.driver_queue.get()
-            driver.close()
+
+
+    def get_lis_from_nav(self, class_id, id_ul):
+        """
+        click on input when there is a value to set.
+        Useful for checking captcha
+        """
+        nav = self.driver.find_element_by_xpath("//nav[@{0}='{1}']".format(class_id, id_ul))
+        liste_href = nav.find_element_by_tag_name("ul")
+        liste = []
+        for li in liste_href.find_elements_by_tag_name("a"):
+            liste.append(li.get_attribute("href"))
+        return liste   
 
 
     def start_threads_and_queues(self, function):
@@ -57,7 +60,6 @@ class Crawling(object):
              t = Thread(target= self.queue_calls, args=(function, self.queues,))
              t.daemon = True
              t.start()
-             
              
     def queue_calls(self, function, queues):
         
@@ -67,11 +69,14 @@ class Crawling(object):
         while True:
             driver = queues["drivers"].get()
             url = queue_url.get()
+            
             self.handle_timeout(driver, url)
                 
-            information = function(driver, queues)
+            information = function(driver)
             
+            driver.delete_all_cookies()
             queues["drivers"].put(driver)
+            queue_results.put(information)
             queue_url.task_done()
             
             if information.shape[0] > 0:
@@ -83,30 +88,31 @@ class Crawling(object):
                          queue_url.get()
                          queue_url.task_done()
                      
-                        
     def handle_timeout(self, driver, url):
+        
         try:
             driver.get(url)
         except Exception:
-            driver.quit()
+            driver.Quit()
             driver = self.initialize_driver()
-            self.handle_timeout(driver, url)
+            self.handle_timeout(driver)
+        
         return driver
+            
+            
+    def save_results(self, url):
         
-    
-    def save_results(self, journal):
-        
+        #### if reached the min date then empty the queue of urls and save all results 
+        path_name = os.environ["DIR_PATH"] + "/data/{0}_{1}.csv".format(re.sub(r'(https|http)://?', '', url).replace("www.","").replace(".fr","").replace(".", ""), datetime.now().strftime("%Y-%m-%d"))
+
         if not os.path.isdir(os.environ["DIR_PATH"] + "/data"):
             os.mkdir(os.environ["DIR_PATH"] + "/data")
             
-        if not os.path.isdir(os.environ["DIR_PATH"] + "/data/" + journal):
-            os.makedirs(os.environ["DIR_PATH"] + "/data/" + journal)
-        
-        #### if reached the min date then empty the queue of urls and save all results 
-        path_name = os.environ["DIR_PATH"] + "/data/" + journal + "/extraction_0_{0}.csv".format(datetime.now().strftime("%Y-%m-%d"))
+        if not os.path.isdir(os.path.dirname(path_name)):
+            os.makedirs(os.path.dirname(path_name))
+            
         if os.path.isfile(path_name):
-            len_files = len(glob.glob(os.environ["DIR_PATH"] + "/data/" + journal+ "/*.csv"))
-            path_name = os.environ["DIR_PATH"] + "/data/" + journal + "/extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))
+            os.remove(path_name)
             
         articles = np.array([])
         i = 0
@@ -117,30 +123,13 @@ class Crawling(object):
                 i +=1
             else:
                 articles = np.concatenate((articles,article), axis=0)
-                 
+            
         article_bdd = pd.DataFrame(articles)
         article_bdd.to_csv(path_name, index=False)
-        print("{0} data extracted".format(article_bdd.shape))
 
       
     def check_in_date(self, information, url):
         if min(pd.to_datetime(information[:,self.id_col_date])) < self.end_date:
             return True
         return False
-    
-    
-    def get_menu_liste(self, url, caracteristics):
-        try:
-            if len(caracteristics["not_in_liste"]) > 0:
-                self.driver.get(url)
-                liste_menu_href = self.get_lis_from_nav(caracteristics["nav_menu"])
-                liste_menu_href = [x for x in liste_menu_href if x not in [url] + caracteristics["not_in_liste"]] 
-                
-                if len(liste_menu_href)>0:
-                    return liste_menu_href
-        except Exception:
-            pass
-        return [url]
-     
-    
     
