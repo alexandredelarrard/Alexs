@@ -9,26 +9,26 @@ Created on Fri Aug  3 10:55:26 2018
 import time
 import numpy as np
 import pandas as pd
-from datetime import datetime
+import os
+import glob
 
 try:
     from crawling import Crawling
 except Exception:
     import sys
-    import os
     sys.path.append(os.environ["DIR_PATH"] + "/script/crawling_script")
     from crawling import Crawling
 
 
 class ArticleCrawling(Crawling):
     
-    def __init__(self, liste_urls, queues):
+    def __init__(self, queues):
         """
         """
-    
         Crawling.__init__(self)
-        self.liste_urls = liste_urls
+        self.journal = queues["carac"]["journal"]
         self.queues = queues
+        
     
     def main_url_crawling(self):
          
@@ -41,7 +41,21 @@ class ArticleCrawling(Crawling):
         print('*** Done in {0}'.format(time.time() - t0))
         self.save_results(self.queues["carac"])
              
-   
+        
+    def get_liste_urls(self):
+        
+        if os.path.isdir(os.environ[""]):
+            liste_files = glob.glob("/".join([os.environ[""],"data",self.journal,"*.csv"]))
+            
+        for i, f in enumerate(liste_files):
+            if i == 0:
+                data = pd.read_csv(f)
+            else:
+                data= pd.concat([data, pd.read_csv(f)], axis=0)
+        self.liste_urls = set(data.loc[:,1].tolist())
+        print("total number of articles to crawl is {0}".format(len(self.liste_urls)))
+    
+    
     def crawl_article(self, driver):
         
         main = driver.find_element_by_xpath("//" + self.queues["carac"]["main"])

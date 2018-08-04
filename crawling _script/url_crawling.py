@@ -26,7 +26,6 @@ class URLCrawling(Crawling):
         Crawling.__init__(self)
         self.url= queues["carac"]["url"]
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
-        self.id_col_date = 0
         self.driver = driver
         self.queues = queues
         self.journal = queues["carac"]["journal"]

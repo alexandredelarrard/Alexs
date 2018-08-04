@@ -94,8 +94,10 @@ class Main(object):
             self.queues["carac"] = {"journal": journal, 
                                    "url": "https://www.mediapart.fr/", 
                                    "nav_menu": "class='main-menu'",
-                                   "not_in_liste": ['/studio','//blogs.mediapart.fr/edition/le-club-mode-demploi',
-                                                    "//blogs.mediapart.fr/",'https://www.mediapart.fr/studio'],
+                                   "not_in_liste": ['https://www.mediapart.fr/journal/dossiers',
+                                                     'https://www.mediapart.fr/studio',
+                                                     'https://blogs.mediapart.fr/',
+                                                     'https://blogs.mediapart.fr/edition/le-club-mode-demploi'],
                                    "time_element":"div[@class='post-list universe-journal']/div/div/time",
                                    "href_element":"div[@class='post-list universe-journal']/div/h3/a",
                                    "article_element":"",
@@ -109,4 +111,4 @@ if __name__ == "__main__":
      environment_variables()
      Main("url", 
           "2018-07-01",
-          [ "mediapart", "lemonde", "lesechos", "lefigaro"])
+          ["lefigaro", "mediapart", "lemonde", "lesechos"])

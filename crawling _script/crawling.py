@@ -6,6 +6,7 @@ Created on Mon Jul 30 13:26:20 2018
 """
 
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 import pandas as pd
 import os
 import multiprocessing
@@ -18,11 +19,9 @@ import glob
 class Crawling(object):
     
     def __init__(self):
-        self.id_col_date = 0
         self.cores = multiprocessing.cpu_count() - 1 ### allow a main thread
-
         
-    def initialize_driver(self):
+    def initialize_driver_firefox(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
@@ -37,6 +36,28 @@ class Crawling(object):
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
         driver.set_page_load_timeout(100)     
+        return driver
+        
+    
+    def initialize_driver(self):
+        """
+        Initialize the web driver with Firefox driver as principal driver geckodriver
+        parameters are here to not load images and keep the default css --> make page loading faster
+        """
+        
+        options = Options()
+        options.add_argument("--headless") # Runs Chrome in headless mode.
+        options.add_argument('--no-sandbox') # Bypass OS security model
+        options.add_argument('--disable-gpu')  # applicable to windows os only
+        options.add_argument('start-maximized') # 
+        options.add_argument('disable-infobars')
+        options.add_argument("--disable-extensions")
+        
+        service_args =["--verbose", "--log-path={0}".format(os.environ["DIR_PATH"] + "/webdriver/chrome.log")]
+        
+        driver = webdriver.Chrome(executable_path= os.environ["DIR_PATH"] + "/webdriver/chromedriver.exe", 
+                                  chrome_options=options, service_args=service_args)
+        driver.delete_all_cookies()
         return driver
     
     
@@ -69,7 +90,7 @@ class Crawling(object):
             url = queue_url.get()
             self.handle_timeout(driver, url)
                 
-            information = function(driver, queues)
+            information = self.handle_information(function, driver, queues)
             
             queues["drivers"].put(driver)
             queue_url.task_done()
@@ -82,7 +103,18 @@ class Crawling(object):
                     while queue_url.qsize()>0:
                          queue_url.get()
                          queue_url.task_done()
-                     
+   
+    
+    def handle_information(self, function, driver, queues):
+        
+        try:
+            information = function(driver, queues)
+        except OSError:
+            driver.close()
+            driver = self.initialize_driver()
+            self.handle_information(function, driver, queues)
+            
+        return information
                         
     def handle_timeout(self, driver, url):
         try:
@@ -124,7 +156,8 @@ class Crawling(object):
 
       
     def check_in_date(self, information, url):
-        if min(pd.to_datetime(information[:,self.id_col_date])) < self.end_date:
+        ### 0 is always the date column by convention, 1 is always the url by convention
+        if min(pd.to_datetime(information[:,0])) < self.end_date: 
             return True
         return False
     
