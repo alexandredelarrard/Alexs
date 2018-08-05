@@ -44,8 +44,8 @@ class ArticleCrawling(Crawling):
         
     def get_liste_urls(self):
         
-        if os.path.isdir(os.environ[""]):
-            liste_files = glob.glob("/".join([os.environ[""],"data",self.journal,"*.csv"]))
+        if os.path.isdir(os.environ["DIR_PATH"]):
+            liste_files = glob.glob("/".join([os.environ["DIR_PATH"],"data",self.journal,"*.csv"]))
             
         for i, f in enumerate(liste_files):
             if i == 0:
@@ -58,8 +58,8 @@ class ArticleCrawling(Crawling):
     
     def crawl_article(self, driver):
         
-        main = driver.find_element_by_xpath("//" + self.queues["carac"]["main"])
-        restricted = 1 if len(main.find_elements_by_xpath("//" + self.queues["carac"]["restricted"])) >0 else 0
+        main = driver.find_element_by_xpath("//" + self.queues["carac"]["article_crawl"]["main"])
+        restricted = 1 if len(main.find_elements_by_xpath("//" + self.queues["carac"]["article_crawl"]["restricted"])) >0 else 0
         
         count_paragraphs = len(main.find_elements_by_tag_name("p"))
         count_h1 = "\n".join([x.text for x in main.find_elements_by_tag_name("h1")])

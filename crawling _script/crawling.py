@@ -21,7 +21,7 @@ class Crawling(object):
     def __init__(self):
         self.cores = multiprocessing.cpu_count() - 1 ### allow a main thread
         
-    def initialize_driver_firefox(self):
+    def initialize_driver(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
@@ -39,13 +39,24 @@ class Crawling(object):
         return driver
         
     
-    def initialize_driver(self):
+    def initialize_driver_chrome(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
         """
         
         options = Options()
+        prefs = {"profile.managed_default_content_settings.images":2,
+                 "profile.default_content_setting_values.notifications":2,
+                 "profile.managed_default_content_settings.stylesheets":2,
+                 "profile.managed_default_content_settings.cookies":2,
+                 "profile.managed_default_content_settings.javascript":1,
+                 "profile.managed_default_content_settings.plugins":1,
+                 "profile.managed_default_content_settings.popups":2,
+                 "profile.managed_default_content_settings.geolocation":2,
+                 "profile.managed_default_content_settings.media_stream":2,
+                 }
+        options.add_experimental_option("prefs",prefs)
         options.add_argument("--headless") # Runs Chrome in headless mode.
         options.add_argument('--no-sandbox') # Bypass OS security model
         options.add_argument('--disable-gpu')  # applicable to windows os only
@@ -57,7 +68,6 @@ class Crawling(object):
         
         driver = webdriver.Chrome(executable_path= os.environ["DIR_PATH"] + "/webdriver/chromedriver.exe", 
                                   chrome_options=options, service_args=service_args)
-        driver.delete_all_cookies()
         return driver
     
     
@@ -90,7 +100,7 @@ class Crawling(object):
             url = queue_url.get()
             self.handle_timeout(driver, url)
                 
-            information = self.handle_information(function, driver, queues)
+            information, driver = self.handle_information(function, driver, queues)
             
             queues["drivers"].put(driver)
             queue_url.task_done()
@@ -112,17 +122,17 @@ class Crawling(object):
         except OSError:
             driver.close()
             driver = self.initialize_driver()
-            self.handle_information(function, driver, queues)
+            information, driver = self.handle_information(function, driver, queues)
             
-        return information
+        return information, driver
                         
     def handle_timeout(self, driver, url):
         try:
             driver.get(url)
         except Exception:
-            driver.quit()
+            driver.close()
             driver = self.initialize_driver()
-            self.handle_timeout(driver, url)
+            driver = self.handle_timeout(driver, url)
         return driver
         
     
@@ -133,12 +143,15 @@ class Crawling(object):
             
         if not os.path.isdir(os.environ["DIR_PATH"] + "/data/" + journal):
             os.makedirs(os.environ["DIR_PATH"] + "/data/" + journal)
+            
+        if not os.path.isdir("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"]])):
+            os.makedirs("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"]]))
         
         #### if reached the min date then empty the queue of urls and save all results 
-        path_name = os.environ["DIR_PATH"] + "/data/" + journal + "/extraction_0_{0}.csv".format(datetime.now().strftime("%Y-%m-%d"))
+        path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], "extraction_0_{0}.csv".format(datetime.now().strftime("%Y-%m-%d"))]) 
         if os.path.isfile(path_name):
-            len_files = len(glob.glob(os.environ["DIR_PATH"] + "/data/" + journal+ "/*.csv"))
-            path_name = os.environ["DIR_PATH"] + "/data/" + journal + "/extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))
+            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], "*.csv"])))
+            path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], "extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))]) 
             
         articles = np.array([])
         i = 0
@@ -160,20 +173,4 @@ class Crawling(object):
         if min(pd.to_datetime(information[:,0])) < self.end_date: 
             return True
         return False
-    
-    
-    def get_menu_liste(self, url, caracteristics):
-        try:
-            if len(caracteristics["not_in_liste"]) > 0:
-                self.driver.get(url)
-                liste_menu_href = self.get_lis_from_nav(caracteristics["nav_menu"])
-                liste_menu_href = [x for x in liste_menu_href if x not in [url] + caracteristics["not_in_liste"]] 
-                
-                if len(liste_menu_href)>0:
-                    return liste_menu_href
-        except Exception:
-            pass
-        return [url]
-     
-    
     
