@@ -30,18 +30,18 @@ class Crawling(object):
         firefox_profile.set_preference('permissions.default.stylesheet', 2)
         firefox_profile.set_preference('permissions.default.image', 2)
         firefox_profile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so', 'false')
-        firefox_profile.set_preference('disk-cache-size', 4096)
-        firefox_profile.set_preference("http.response.timeout", 10)
+        firefox_profile.set_preference('disk-cache-size', 8000)
+        firefox_profile.set_preference("http.response.timeout", 20)
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
-        driver.set_page_load_timeout(100)     
+        driver.set_page_load_timeout(200)     
         return driver
         
     
     def initialize_driver_chrome(self):
         """
-        Initialize the web driver with Firefox driver as principal driver geckodriver
+        Initialize the web driver with chrome driver as principal driver chromedriver.exe, headless means no open web page. But seems slower than firefox driver  
         parameters are here to not load images and keep the default css --> make page loading faster
         """
         
@@ -146,12 +146,15 @@ class Crawling(object):
             
         if not os.path.isdir("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"]])):
             os.makedirs("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"]]))
-        
+            
+        if not os.path.isdir("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d")])):
+            os.makedirs("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d")]))
+            
         #### if reached the min date then empty the queue of urls and save all results 
-        path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], "extraction_0_{0}.csv".format(datetime.now().strftime("%Y-%m-%d"))]) 
+        path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d"), "extraction_0.csv"]) 
         if os.path.isfile(path_name):
-            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], "*.csv"])))
-            path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], "extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))]) 
+            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d"), "*.csv"])))
+            path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d"), "extraction_{0}.csv".format(len_files)]) 
             
         articles = np.array([])
         i = 0

@@ -11,6 +11,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import unidecode
 import locale
+locale.setlocale(locale.LC_ALL, 'fr_FR')
 import dateparser
 
 try:
@@ -64,7 +65,6 @@ class URLCrawling(Crawling):
                         - url full article
                         - Description in text such as title, small desc, autor, category
         """
-        
         if queue["carac"]["url_crawl"]["time_element"] != []:
             times = []
             for string in queue["carac"]["url_crawl"]["time_element"]:
@@ -81,7 +81,9 @@ class URLCrawling(Crawling):
                href += driver.find_elements_by_xpath("//"+string)
             liste_href =[]
             for h in href:
-                liste_href.append(h.get_attribute("href"))
+                ref = h.get_attribute("href")
+                if ref != "":
+                    liste_href.append(ref)
         else:
            liste_href =  eval("self.%s_href_element(driver)"%queue["carac"]["journal"])
         
@@ -91,12 +93,15 @@ class URLCrawling(Crawling):
                 articles += driver.find_elements_by_xpath("//"+string)
             liste_text = []
             for ar in articles:
-                liste_text.append(ar.text)
+                texte = ar.text
+                if texte != "":
+                    liste_text.append(texte)
         else:
              liste_text = eval("self.%s_article_element(driver)"%queue["carac"]["journal"])
         
         information = np.array(np.transpose([x for x in [liste_times, liste_href, liste_text] if x != []]))
-        print(information.shape)
+        driver.delete_all_cookies()
+
         return information
     
     
@@ -160,18 +165,20 @@ class URLCrawling(Crawling):
             self.queues["urls"].put(self.url + "{0}/{1}".format(str(new_date.year) + new_month, new_day))
      
     def fill_queue_url_latribune(self, element):
-        locale.setlocale(locale.LC_ALL, 'fr_FR')
         self.driver = self.handle_timeout(self.driver, element+ "page-1")
-        delta_liste = [unidecode.unidecode(d.strftime('%B-%Y')) for d in pd.date_range(self.end_date, datetime.now(), freq='M')]
+        delta_liste = [unidecode.unidecode(d.strftime('%B-%Y')) for d in pd.date_range(self.end_date, datetime.now() + timedelta(30), freq='M')]
          
-        print("max pages to crawl for {0} : {1}".format(element,len(delta_liste)*5))
+        print("pages to crawl for {0} : {1}".format(element, delta_liste))
         #### fill the queue with all possible urls
         for date in delta_liste:
             self.driver.get(element + date + "/page-1")
-            nbr_pages = len(self.driver.find_element_by_xpath("//ul[@class='pagination-archive pages']").find_elements_by_tag_name("li"))
-            for i in range(1, nbr_pages+1):
-                self.queues["urls"].put(element + date +"/page-%i"%i)
-        locale.setlocale(locale.LC_ALL, 'C')
+            try:
+                ul = self.driver.find_element_by_xpath("//ul[@class='pagination-archive pages']")
+                nbr_pages = len(ul.find_elements_by_tag_name("li"))
+                for i in range(1, nbr_pages+1):
+                    self.queues["urls"].put(element + date +"/page-%i"%i)
+            except Exception:
+                pass
 
     def fill_queue_url_leparisien(self, element):
         self.driver = self.handle_timeout(self.driver, element)
@@ -196,24 +203,7 @@ class URLCrawling(Crawling):
 
 # =============================================================================
 # specific element crawling into time, url text of article        
-# =============================================================================
-    #### lemonde
-    def lemonde_article_element(self, driver):
-        nbr = driver.find_elements_by_tag_name("article")
-        liste_text = []
-        for comment in nbr:
-            liste_text.append(comment.text)
-        return liste_text
-        
-    #### mediapart
-    def mediapart_article_element(self, driver):
-        articles = driver.find_elements_by_xpath("//div[@class='post-list universe-journal']/div")
-        liste_text = []
-        for ar in articles:
-            if ar.get_attribute("data-type") == "article":
-                liste_text.append(ar.text)
-        return liste_text
-    
+# =============================================================================      
     #### le figaro
     def lefigaro_time_element(self, driver):
         href = driver.find_elements_by_xpath("//div[@class='SiteMap']/a")
@@ -227,14 +217,12 @@ class URLCrawling(Crawling):
     
     #### la tribune
     def latribune_time_element(self, driver):
-        locale.setlocale(locale.LC_ALL, 'fr_FR')
-        date = driver.current_url.split("/")[-2]
+        date = driver.current_url.split("/")[-2].replace("aout", "août").replace("fevrier", "février").replace("decembre", "décembre")
         date = pd.to_datetime(date, format = "%B-%Y").strftime("%Y-%m-%d")
         href = driver.find_elements_by_xpath("//article[@class='article-wrapper row clearfix ']")
         liste_times =[]
         for h in href:
             liste_times.append(date)
-        locale.setlocale(locale.LC_ALL, 'C')
         return liste_times
     
     #### le parisien
@@ -269,20 +257,14 @@ class URLCrawling(Crawling):
         href = []
         for string in self.queues["carac"]["url_crawl"]["href_element"]:
              href += driver.find_elements_by_xpath("//"+string)
-             
-        date = True
-        i = 0
-        while date and i < len(href):
-            i +=1
-            try:
-                url = href[-i].get_attribute("href")
-                driver.get(url)
-                date = driver.find_element_by_xpath("//div[@class='signature']/time").get_attribute("datetime")
-            except Exception:
-                pass
-        if date:
-            date = datetime.now()  
         
+        ### say we have 3 articles on average per day  per category at max, will then stop when number is reached
+        delta = (datetime.now() - self.end_date).days*2
+        if delta < self.queues["results"].qsize():
+            date = self.end_date - timedelta(10)
+        else:
+            date = datetime.now()
+            
         liste_times = []
         for i in range(len(href)): 
             liste_times.append(date)

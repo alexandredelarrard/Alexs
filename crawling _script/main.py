@@ -63,13 +63,15 @@ class Main(object):
         if journal == "lemonde":
             self.queues["carac"] = {"url_crawl":{"url": "https://www.lemonde.fr/", 
                                                 "in_liste": ['https://www.lemonde.fr/international/','https://www.lemonde.fr/politique/',
-                                                             'https://www.lemonde.fr/societe/','https://www.lemonde.fr/economie/','https://www.lemonde.fr/culture/',
+                                                             'https://www.lemonde.fr/societe/','https://www.lemonde.fr/economie/',
+                                                             'https://www.lemonde.fr/culture/',
                                                              'https://www.lemonde.fr/idees/','https://www.lemonde.fr/planete/',
-                                                             'https://www.lemonde.fr/sport/','https://www.lemonde.fr/sciences/'], # missing pixels, campus, m-mag
+                                                             'https://www.lemonde.fr/sport/','https://www.lemonde.fr/sciences/', 
+                                                             'https://www.lemonde.fr/campus/'], # missing pixels, m-mag
                                                 "time_element":["time[@class='grid_1 alpha']"],
                                                 "href_element":["div[@class='grid_11 conteneur_fleuve omega']/div/h3/a"],
-                                                "article_element":[],
-                                                "fill_queue":["div[@class='padt8']/div/ul","adroite","{0}.html"]
+                                                "article_element":["article"],
+                                                "fill_queue":["div[@class='conteneur_pagination']/ul","adroite","{0}.html"]
                                                   },
                                     "article_crawl": {"article_crawl" :"",
                                                       "restricted" : ""}
@@ -99,11 +101,14 @@ class Main(object):
             
         elif journal == "mediapart":
             self.queues["carac"] = {"url_crawl":{ "url": "https://www.mediapart.fr/", 
-                                                   "in_liste": ["https://www.mediapart.fr/journal/international","https://www.mediapart.fr/journal/france",
-                                                                "https://www.mediapart.fr/journal/economie","https://www.mediapart.fr/journal/culture-idees"], # missing dossiers, le studio, le club
-                                                   "time_element":["div[@class='post-list universe-journal']/div/div/time"],
-                                                   "href_element":["div[@class='post-list universe-journal']/div/h3/a"],
-                                                   "article_element":[],
+                                                   "in_liste": ["https://www.mediapart.fr/journal/international",
+                                                                "https://www.mediapart.fr/journal/france",
+                                                                "https://www.mediapart.fr/journal/economie",
+                                                                "https://www.mediapart.fr/journal/culture-idees",
+                                                                "https://www.mediapart.fr/journal/dossiers"], # missing le studio, le club
+                                                   "time_element":["div[@data-type='article']/div/time", "li[@data-type='case']/div/time"],
+                                                   "href_element":["div[@data-type='article']/h3/a","li[@data-type='case']/h3/a"],
+                                                   "article_element":["div[@data-type='article']","li[@data-type='case']"],
                                                    "fill_queue":["ul[@class='pager']","pager-last","?page={0}"]},
                                     "article_crawl": {"article_crawl" :"",
                                                       "restricted" : ""}
@@ -115,8 +120,8 @@ class Main(object):
                                                                "https://www.latribune.fr/technos-medias-28/", "https://www.latribune.fr/vos-finances-38/", 
                                                                "https://www.latribune.fr/opinions-65/", "https://www.latribune.fr/regions-70/"], # missing bourse = webfg/articles/marches-france/
                                                    "time_element":[],
-                                                   "href_element":["article[@class='article-wrapper row clearfix ']/section/h2/a"],
-                                                   "article_element":["article[@class='article-wrapper row clearfix ']"],
+                                                   "href_element":["article/section/h2/a"],
+                                                   "article_element":["article"],
                                                    "fill_queue":[]},
                                     "article_crawl": {"article_crawl" :"",
                                                       "restricted" : ""}
@@ -176,4 +181,4 @@ if __name__ == "__main__":
      environment_variables()
      Main(["url"], 
           "2018-07-01",
-          ["lexpress", "latribune", "leparisien"]) #, "lefigaro", "mediapart", "lemonde", "lesechos"
+          ["mediapart", "latribune", "leparisien", "lexpress", "lefigaro", "lemonde", "lesechos"]) 
