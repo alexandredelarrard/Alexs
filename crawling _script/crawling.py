@@ -15,6 +15,9 @@ from queue import Queue
 from threading import Thread
 import numpy as np
 import glob
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+
 
 class Crawling(object):
     
@@ -31,11 +34,28 @@ class Crawling(object):
         firefox_profile.set_preference('permissions.default.image', 2)
         firefox_profile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so', 'false')
         firefox_profile.set_preference('disk-cache-size', 8000)
-        firefox_profile.set_preference("http.response.timeout", 20)
+        firefox_profile.set_preference("http.response.timeout", 60)
+        firefox_profile.set_preference("dom.disable_open_during_load", True);
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
-        driver.set_page_load_timeout(200)     
+        driver.set_page_load_timeout(300)     
+        return driver
+    
+    def initialize_driver_tor(self):
+        """
+        Initialize the web driver with Firefox driver as principal driver geckodriver
+        parameters are here to not load images and keep the default css --> make page loading faster
+        """
+        firefox_profile = webdriver.FirefoxProfile()
+        firefox_profile.set_preference('permissions.default.stylesheet', 2)
+        firefox_profile.set_preference('permissions.default.image', 2)
+        firefox_profile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so', 'false')
+        firefox_profile.set_preference('disk-cache-size', 8000)
+        firefox_profile.set_preference("http.response.timeout", 60)
+        firefox_profile.set_preference("dom.disable_open_during_load", True);
+        
+        driver = TorBrowserDriver(tbb_fx_binary_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.exe", tbb_profile_path = os.environ["DIR_PATH"] + "/webdriver/", tbb_logfile_path = os.environ["DIR_PATH"] + "/webdriver/tor.log")
         return driver
         
     
@@ -119,7 +139,8 @@ class Crawling(object):
         
         try:
             information = function(driver, queues)
-        except Exception:
+        except Exception as e:
+            print(e)
             driver.close()
             driver = self.initialize_driver()
             information, driver = self.handle_information(function, driver, queues)

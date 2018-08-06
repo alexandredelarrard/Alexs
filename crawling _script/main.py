@@ -216,4 +216,4 @@ if __name__ == "__main__":
      environment_variables()
      Main(["url"], 
           "2018-07-01",
-          ["leparisien", "liberation", "lemonde", "lesechos", "mediapart", "latribune", "lexpress", "lefigaro"]) # "humanite",, 
+          ["liberation", "leparisien", "lemonde", "lesechos", "mediapart", "latribune", "lexpress", "lefigaro"]) # "humanite",
