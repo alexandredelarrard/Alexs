@@ -65,17 +65,7 @@ class URLCrawling(Crawling):
                         - url full article
                         - Description in text such as title, small desc, autor, category
         """
-        if queue["carac"]["url_crawl"]["time_element"] != []:
-            times = []
-            for string in queue["carac"]["url_crawl"]["time_element"]:
-                times += driver.find_elements_by_xpath("//"+string)
-            liste_times =[]
-            for t in times:
-                liste_times.append(t.get_attribute("datetime"))
-        else:
-            liste_times = eval("self.%s_time_element(driver)"%queue["carac"]["journal"])
-
-        if queue["carac"]["url_crawl"]["href_element"] != []:
+        if len(queue["carac"]["url_crawl"]["href_element"]) > 0:
             href = []
             for string in queue["carac"]["url_crawl"]["href_element"]:
                href += driver.find_elements_by_xpath("//"+string)
@@ -85,9 +75,24 @@ class URLCrawling(Crawling):
                 if ref != "":
                     liste_href.append(ref)
         else:
-           liste_href =  eval("self.%s_href_element(driver)"%queue["carac"]["journal"])
+             liste_href = eval("self.%s_href_element(driver)"%queue["carac"]["journal"])
         
-        if queue["carac"]["url_crawl"]["article_element"] != []:
+        if len(queue["carac"]["url_crawl"]["time_element"]) == 4:
+           
+            liste_times =[]
+            filters = queue["carac"]["url_crawl"]["time_element"]
+            for link in liste_href:
+                try:
+                    date= pd.to_datetime("-".join(link.split(filters[3])[filters[0]:filters[1]]), format = filters[2])
+                except Exception:
+                    date = datetime.now()
+                    
+                liste_times.append(date)
+        else:
+            liste_times = eval("self.%s_time_element(driver)"%queue["carac"]["journal"])
+
+        
+        if len(queue["carac"]["url_crawl"]["article_element"]) > 0:
             articles = []
             for string in queue["carac"]["url_crawl"]["article_element"]:
                 articles += driver.find_elements_by_xpath("//"+string)
@@ -109,49 +114,23 @@ class URLCrawling(Crawling):
          """
          Fill in the queue of urls based on the maximum number of pages with same url root 
          Depending on the number of days to crawl, the max_number of pages to crawl is capped
+         The assumption is that there is 1 page of articles per day
          """
          
-         if len(self.queues["carac"]["url_crawl"]["fill_queue"]) ==3:
-             self.driver = self.handle_timeout(self.driver, element)
-             try:
-                 pagination = self.driver.find_element_by_xpath("//"+self.queues["carac"]["url_crawl"]["fill_queue"][0])
-                 last_page = pagination.find_element_by_class_name(self.queues["carac"]["url_crawl"]["fill_queue"][1]).text
-             except Exception:
-                 last_page = '100'
-                 
-             cap_articles = (datetime.now() - self.end_date).days*3
-              
-             if last_page.isdigit():
-                 max_pages = min(int(last_page), cap_articles)
-             else:
-                 max_pages = 100
-                             
-             #### fill the queue with all possible urls
-             print("max pages to crawl for {0} : {1}".format(element, max_pages))
-             for i in range(1,max_pages+1):
-                 self.queues["urls"].put(element+self.queues["carac"]["url_crawl"]["fill_queue"][2].format(i))
+         cap_articles = (datetime.now() - self.end_date).days*3
+         
+         #### fill the queue with all possible urls
+         if len(self.queues["carac"]["url_crawl"]["fill_queue"]) == 2:
+             print("max pages to crawl for {0} : {1}".format(element, cap_articles))
+             for i in range(self.queues["carac"]["url_crawl"]["fill_queue"][1], cap_articles + 1):
+                 new_url = element+self.queues["carac"]["url_crawl"]["fill_queue"][0].format(i)
+                 self.queues["urls"].put(new_url)
          else:
-            exec("self.fill_queue_url_%s(element)"%self.queues["carac"]["journal"])
+             exec("self.fill_queue_url_%s(element)"%self.queues["carac"]["journal"])
         
 # =============================================================================
 #  Fill in url queue with sepecific cases
 # =============================================================================
-    def fill_queue_url_lesechos(self, element):
-         url = "http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&"
-         self.driver = self.handle_timeout(self.driver, url + "date1={0}&date2={1}&page=1".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d")))
-         pagination = self.driver.find_element_by_xpath("//div[@class='main-content content-page']/header/div")
-         last_page = pagination.find_element_by_tag_name("strong").text.replace("résultats","").strip().replace(" ","")
-        
-         if last_page.isdigit():
-             max_pages = int(int(last_page)/10) # because 10 results per page
-         else:
-             max_pages = 1
-             
-         print("max pages to crawl for {0} : {1}".format(self.url, max_pages))
-         #### fill the queue with all possible urls
-         for i in range(1, max_pages+1):
-             self.queues["urls"].put(url + "date1={0}&date2={1}&page={2}".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d"), i))
-             
     def fill_queue_url_lefigaro(self, element):
         self.driver = self.handle_timeout(self.driver, element)
         delta = datetime.now() - self.end_date
@@ -163,7 +142,8 @@ class URLCrawling(Crawling):
             new_month = str(new_date.month) if len(str(new_date.month)) ==2 else "0" +  str(new_date.month)
             new_day = str(new_date.day) if len(str(new_date.day)) ==2 else "0" +  str(new_date.day)
             self.queues["urls"].put(self.url + "{0}/{1}".format(str(new_date.year) + new_month, new_day))
-     
+             
+             
     def fill_queue_url_latribune(self, element):
         self.driver = self.handle_timeout(self.driver, element+ "page-1")
         delta_liste = [unidecode.unidecode(d.strftime('%B-%Y')) for d in pd.date_range(self.end_date, datetime.now() + timedelta(30), freq='M')]
@@ -179,42 +159,10 @@ class URLCrawling(Crawling):
                     self.queues["urls"].put(element + date +"/page-%i"%i)
             except Exception:
                 pass
-
-    def fill_queue_url_leparisien(self, element):
-        self.driver = self.handle_timeout(self.driver, element)
-        pagination = self.driver.find_element_by_xpath("//a[@class='pagination__last']")
-        max_pages = int(pagination.get_attribute("href").split("/")[-1].split("-")[1])
-         
-        print("max pages to crawl for {0} : {1}".format(element, max_pages))
-        #### fill the queue with all possible urls
-        for i in range(2, max_pages+1): 
-            self.queues["urls"].put(element + "page-%i"%i)
-            
-    def fill_queue_url_lexpress(self, element):
-        self.driver = self.handle_timeout(self.driver, element)
-        pagination = self.driver.find_element_by_xpath("//div[@class='paginate paginate_list']")
-        last_ul = pagination.find_elements_by_tag_name("ul")[-1]
-        max_pages = int(last_ul.find_elements_by_tag_name("li")[-1].text)
         
-        print("max pages to crawl for {0} : {1}".format(element, max_pages))
-        #### fill the queue with all possible urls
-        for i in range(1, max_pages+1): 
-            self.queues["urls"].put(element + "?p=%i"%i)
-
 # =============================================================================
 # specific element crawling into time, url text of article        
 # =============================================================================      
-    #### le figaro
-    def lefigaro_time_element(self, driver):
-        href = driver.find_elements_by_xpath("//div[@class='SiteMap']/a")
-        liste_times =[]
-        for h in href:
-            link = h.get_attribute("href")
-            integers = [x for x in link.replace("http://www.lefigaro.fr/", "").split("/") if x.isdigit()]
-            time = "-".join(integers)
-            liste_times.append(time)
-        return liste_times
-    
     #### la tribune
     def latribune_time_element(self, driver):
         date = driver.current_url.split("/")[-2].replace("aout", "août").replace("fevrier", "février").replace("decembre", "décembre")
@@ -225,41 +173,28 @@ class URLCrawling(Crawling):
             liste_times.append(date)
         return liste_times
     
-    #### le parisien
-    def leparisien_time_element(self, driver):
-        articles = []
-        for string in self.queues["carac"]["url_crawl"]["article_element"]:
-            articles += driver.find_elements_by_xpath("//"+string)
-            
-        times = driver.find_elements_by_xpath("//div[@class='article__list-alt-date']")
-        for new_time in times:
-            date =  dateparser.parse(new_time.text).strftime("%Y-%m-%d")
-            
-        if len(times) == 0:
-            date = True
-            i = 0
-            while date and i < len(articles):
-                i +=1
-                try:
-                    date = dateparser.parse(articles[-i].find_element_by_xpath("div[@class='article__list-infos']/div/div[2]").text)
-                except Exception:
-                    pass
-            if date:
-                date = datetime.now()
-                
-        liste_times = []
-        for i in range(len(articles)): 
-            liste_times.append(date)
+    #### lesechos
+    def lesechos_time_element(self, driver):
+        times = driver.find_elements_by_xpath("//article[@class='liste-article']/div/time")
+        liste_times =[]
+        for t in times:
+            liste_times.append(t.get_attribute("datetime"))
         return liste_times
     
+    #### humanite
+    def humanite_time_element(self, driver):
+        times = driver.find_elements_by_xpath("//div[@class='group-ft-description field-group-div']/div[4]/div/div/div/span")
+        liste_times =[]
+        for t in times:
+            liste_times.append(dateparser.parse(t.text).strftime("%Y-%m-%d"))
+        return liste_times
+
     #### lexpress
     def lexpress_time_element(self, driver):
-        href = []
-        for string in self.queues["carac"]["url_crawl"]["href_element"]:
-             href += driver.find_elements_by_xpath("//"+string)
+        href = driver.find_elements_by_xpath("//div[@class='groups']/div/a")
         
         ### say we have 3 articles on average per day  per category at max, will then stop when number is reached
-        delta = (datetime.now() - self.end_date).days*2
+        delta = (datetime.now() - self.end_date).days
         if delta < self.queues["results"].qsize():
             date = self.end_date - timedelta(10)
         else:
@@ -268,6 +203,19 @@ class URLCrawling(Crawling):
         liste_times = []
         for i in range(len(href)): 
             liste_times.append(date)
-        
         return liste_times
     
+    #### liberation
+    def liberation_href_element(self, driver):
+        lis = driver.find_elements_by_xpath("//ul[@class='live-items']/li/div/p/a")
+        liste_href =[]
+        for h in lis:
+            liste_href.append(h.get_attribute("href"))
+            
+        lis = driver.find_elements_by_xpath("//ul[@class='live-items']/li/a")
+        for h in lis:
+            if h.get_attribute("class") == "tag-first-item-link":
+                liste_href.append(h.get_attribute("href"))
+            
+        return liste_href
+

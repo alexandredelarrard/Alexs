@@ -119,7 +119,7 @@ class Crawling(object):
         
         try:
             information = function(driver, queues)
-        except OSError:
+        except Exception:
             driver.close()
             driver = self.initialize_driver()
             information, driver = self.handle_information(function, driver, queues)
