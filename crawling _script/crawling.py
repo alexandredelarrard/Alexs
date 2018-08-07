@@ -15,6 +15,7 @@ from queue import Queue
 from threading import Thread
 import numpy as np
 import glob
+import random
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
@@ -23,7 +24,20 @@ class Crawling(object):
     
     def __init__(self):
         self.cores = multiprocessing.cpu_count() - 1 ### allow a main thread
-        
+        self.agents =  pd.read_csv(os.environ["DIR_PATH"] + "/webdriver/agents.csv")["agents"].tolist()
+    
+    def initialize_driver_phjs(self):
+        """
+        Initialize the web driver with Firefox driver as principal driver geckodriver
+        parameters are here to not load images and keep the default css --> make page loading faster
+        """
+        service_args = [
+            '--proxy=xywl:5Welcome@proxy.ais:8080',
+            '--proxy-type=http',
+            ]
+        driver = webdriver.PhantomJS(executable_path= os.environ["DIR_PATH"] + "/drivers/phantomjs.exe", service_args=service_args)   
+        return driver
+    
     def initialize_driver(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
@@ -36,6 +50,7 @@ class Crawling(object):
         firefox_profile.set_preference('disk-cache-size', 8000)
         firefox_profile.set_preference("http.response.timeout", 60)
         firefox_profile.set_preference("dom.disable_open_during_load", True);
+        firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents))]);
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
@@ -83,6 +98,7 @@ class Crawling(object):
         options.add_argument('start-maximized') # 
         options.add_argument('disable-infobars')
         options.add_argument("--disable-extensions")
+        options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents))]))
         
         service_args =["--verbose", "--log-path={0}".format(os.environ["DIR_PATH"] + "/webdriver/chrome.log")]
         
@@ -133,6 +149,10 @@ class Crawling(object):
                     while queue_url.qsize()>0:
                          queue_url.get()
                          queue_url.task_done()
+                         
+                ### if queue has more than X elements in queue then save elements to have a queue size not too big
+                if queue_url.qsize()>1000:
+                    self.save_results(queues["carac"]["journal"])
    
     
     def handle_information(self, function, driver, queues):

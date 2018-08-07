@@ -33,7 +33,7 @@ class Main(object):
         
         crawl = Crawling()
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
-        self.cores   =  multiprocessing.cpu_count() - 1
+        self.cores   =  2#multiprocessing.cpu_count() - 1
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}
 
         self.driver = crawl.initialize_driver()
@@ -53,7 +53,9 @@ class Main(object):
                 if url_article=="url":
                     URLCrawling(self.end_date, self.queues, self.driver)
                 elif url_article=="article":
-                    ArticleCrawling(self.end_date, self.queues, self.driver)
+                    self.cores   =  multiprocessing.cpu_count()
+                    self.queues["drivers"].put(self.driver)
+                    ArticleCrawling(self.end_date, self.queues)
                 else:
                     print("Currently two actions handled: url extraction or article crawling")
 
@@ -74,8 +76,9 @@ class Main(object):
                                                 "article_element":["article[@class='grid_12 alpha enrichi mgt8']", "article[@class='grid_12 alpha enrichi']"],
                                                 "fill_queue":["{0}.html",1]
                                                   },
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["article[@class='article article_normal']", "div[@id='content']/div[2]"],
+                                                      "restricted" : ["div[@id='teaser_article']"],
+                                                      "head_article":[]}
                                     }
             
         elif journal == "lefigaro":
@@ -85,8 +88,9 @@ class Main(object):
                                                 "href_element":["div[@class='SiteMap']/a"],
                                                 "article_element":["div[@class='SiteMap']/a"],
                                                 "fill_queue":[]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["article[@class='fig-content']"],
+                                                      "restricted" : ["div[@class='fig-premium-paywall']/p"],
+                                                      "head_article": []}
                                     }
                 
         elif journal == "lesechos":
@@ -96,8 +100,9 @@ class Main(object):
                                                    "href_element":["article[@class='liste-article']/h2/a"],
                                                    "article_element":["article[@class='liste-article']"],
                                                    "fill_queue":["page={0}",1]},
-                                   "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                   "article_crawl": {"main" :["div[@class='main-content content-article']"],
+                                                      "restricted" : ["div[@class='block-paywall-article degrade-texte']/div"],
+                                                      "head_article": []}
                                     }
             
         elif journal == "mediapart":
@@ -111,8 +116,9 @@ class Main(object):
                                                    "href_element":["div[@data-type='article']/h3/a","li[@data-type='case']/h3/a"],
                                                    "article_element":["div[@data-type='article']","li[@data-type='case']"],
                                                    "fill_queue":["?page={0}",1]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["main[@class='global-wrapper']/div[2]/div"],
+                                                      "restricted" : ["div[@class='content-article content-restricted']"],
+                                                      "head_article": ["main[@class='global-wrapper']/div/div"]}
                                     }
                                     
         elif journal == "latribune":
@@ -124,8 +130,9 @@ class Main(object):
                                                    "href_element":["article/section/h2/a"],
                                                    "article_element":["article"],
                                                    "fill_queue":[]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["section[@class='contenu-article clearfix']/div"],
+                                                      "restricted" : [],
+                                                      "head_article": ["div[@class='article-title-wrapper']", "section[@class='chapo']"]}
                                     }
                                     
         elif journal == "leparisien":
@@ -144,8 +151,9 @@ class Main(object):
                                                                        "div[@class='container article__list  article__list_pagin']",
                                                                        "div[@class='container article__list  article__list_pagin article__list_pagin_small']"],
                                                    "fill_queue":["page-{0}",2]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["article[@class='article-full']"],
+                                                      "restricted" : ["iframe[@allowtransparency='true']"],
+                                                      "head_article": []}
                                     }
                                     
         elif journal == "lexpress":
@@ -164,8 +172,9 @@ class Main(object):
                                                    "href_element":["div[@class='groups']/div/a"],
                                                    "article_element":["div[@class='groups']/div"],
                                                    "fill_queue":["?p={0}",1]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["div[@class='article_content']/div/div"],
+                                                      "restricted" : [],
+                                                      "head_article": ["div[@class='article_header_grid ']"]}
                                     }
                                     
         elif journal == "humanite":
@@ -182,8 +191,9 @@ class Main(object):
                                                    "href_element":["div[@class='group-ft-description field-group-div']/div[2]/div/div/h2/a"],
                                                    "article_element":["div[@class='group-ft-description field-group-div']"],
                                                    "fill_queue":["?page={0}",1]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                    "article_crawl": {"main" :["div[@class='group-ft-header-node-article field-group-div']"],
+                                                      "restricted" : ["div[@class='group-ft-header-node-article field-group-div']/div[3]/div[3]/div/div/div/div/div/div"],
+                                                      "head_article": []}
                                     }
                                     
         elif journal == "liberation":
@@ -203,8 +213,10 @@ class Main(object):
                                                    "article_element":["ul[@class='live-items']/li/div[2]",
                                                                       "ul[@class='live-items']/li/a/div[2]"],
                                                    "fill_queue":["?page={0}",1]},
-                                    "article_crawl": {"article_crawl" :"",
-                                                      "restricted" : ""}
+                                     
+                                     "article_crawl": {"main" :["div[@class='container-column clearfix']"],
+                                                      "restricted" : [],
+                                                      "head_article": ["div[@class='read-left-padding']"]}
                                     }
                                     
         else:
@@ -214,6 +226,6 @@ class Main(object):
 
 if __name__ == "__main__":
      environment_variables()
-     Main(["url"], 
+     Main(["article"], 
           "2018-07-01",
-          ["liberation", "leparisien", "lemonde", "lesechos", "mediapart", "latribune", "lexpress", "lefigaro"]) # "humanite",
+          ["lemonde", "liberation", "leparisien", "lesechos", "mediapart", "latribune", "lexpress", "lefigaro"]) # "humanite",
