@@ -12,7 +12,7 @@ import os
 import multiprocessing
 from datetime import datetime
 from queue import Queue
-from threading import Thread
+from threading import Thread, get_ident
 import numpy as np
 import glob
 import random
@@ -48,7 +48,7 @@ class Crawling(object):
         firefox_profile.set_preference('permissions.default.image', 2)
         firefox_profile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so', 'false')
         firefox_profile.set_preference('disk-cache-size', 8000)
-        firefox_profile.set_preference("http.response.timeout", 60)
+        firefox_profile.set_preference("http.response.timeout", 120)
         firefox_profile.set_preference("dom.disable_open_during_load", True);
         firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents))]);
     
@@ -136,7 +136,7 @@ class Crawling(object):
             url = queue_url.get()
             self.handle_timeout(driver, url)
                 
-            information, driver = self.handle_information(function, driver, queues)
+            information, driver = self.handle_information(function, driver, queues, url, 0)
             
             queues["drivers"].put(driver)
             queue_url.task_done()
@@ -151,19 +151,22 @@ class Crawling(object):
                          queue_url.task_done()
                          
                 ### if queue has more than X elements in queue then save elements to have a queue size not too big
-                if queue_url.qsize()>1000:
+                if queue_results.qsize()>100:
                     self.save_results(queues["carac"]["journal"])
    
     
-    def handle_information(self, function, driver, queues):
-        
+    def handle_information(self, function, driver, queues, url, compteur):
         try:
             information = function(driver, queues)
         except Exception as e:
-            print(e)
-            driver.close()
-            driver = self.initialize_driver()
-            information, driver = self.handle_information(function, driver, queues)
+            if compteur < 2: 
+                driver.close()
+                driver = self.initialize_driver()
+                driver = self.handle_timeout(driver, url)
+                information, driver = self.handle_information(function, driver, queues, url, compteur +1)
+            else: 
+                print("thread : {0}, url : {1}, error : {2}".format(get_ident(), driver.current_url, e))
+                return np.array([]), driver
             
         return information, driver
                         

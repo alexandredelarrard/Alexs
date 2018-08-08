@@ -12,6 +12,7 @@ import pandas as pd
 import os
 import glob
 from datetime import datetime
+import random
 
 try:
     from crawling import Crawling
@@ -47,7 +48,13 @@ class ArticleCrawling(Crawling):
              
         
     def get_liste_urls(self):
-
+        
+        def filtered_url(x, not_to_crawl):
+            for a in not_to_crawl:
+                if a in x:
+                    return 0
+            return 1
+        
         liste_files = glob.glob("/".join([os.environ["DIR_PATH"], "data", self.journal, "url", "*/*.csv"]))
             
         for i, f in enumerate(liste_files):
@@ -55,27 +62,30 @@ class ArticleCrawling(Crawling):
                 data = pd.read_csv(f, encoding = "latin1")
             else:
                 data= pd.concat([data, pd.read_csv(f, encoding = "latin1")], axis=0)
-        self.liste_urls = set(data["1"].tolist())
+        liste = data["1"]
+        liste["0-1"] = data["1"].apply(lambda x : filtered_url(x, self.queues["carac"]["article_crawl"]["not_to_crawl"]))
+
+        self.liste_urls =  set(liste.loc[liste["0-1"] == 1, "1"].tolist())
         print("total number of articles to crawl is {0}".format(len(self.liste_urls)))
-             
-   
+
+    
     def crawl_article(self, driver, queues):
         
-        if len(queues["carac"]["article_crawl"]["restricted"]) > 0:    
-            for string in self.queues["carac"]["article_crawl"]["restricted"]:
-                try:
+        url = driver.current_url
+        restricted = []
+        try:
+            if len(queues["carac"]["article_crawl"]["restricted"]) > 0:    
+                for string in queues["carac"]["article_crawl"]["restricted"]:
                     element_restrict = driver.find_elements_by_xpath("//" + string)
-                    restricted = 1 if len(element_restrict) >0 else 0
-                    text_restriction = element_restrict[0].text
-                except Exception:
-                    pass 
-        else:
+                    restricted.append(1 if len(element_restrict) >0 else 0)
+                restricted = max(restricted)    
+        except Exception:
             restricted = 0
-            text_restriction = ""
+            pass 
         
         ### have to reopen a driver with other IP because article is not fully available
-        if restricted == 1:
-            raise Exception
+#        if restricted == 1:
+#            raise Exception
         
         if len(queues["carac"]["article_crawl"]["head_article"])>0:
             head = ""
@@ -87,18 +97,25 @@ class ArticleCrawling(Crawling):
         else:
             head = ""
            
-        for string in queues["carac"]["article_crawl"]["main"]:
-            try:
-                main = driver.find_element_by_xpath("//" + string)
-            except Exception:
-                pass
-
-        count_paragraphs = len(main.find_elements_by_tag_name("p"))
-        count_h1 = "\n".join([x.text for x in main.find_elements_by_tag_name("h1")])
-        count_h2 = "\n".join([x.text for x in main.find_elements_by_tag_name("h2")])
-        count_h3 = "\n".join([x.text for x in main.find_elements_by_tag_name("h3")])
-        
-        texte = main.text
-        information = np.transpose(np.array([[datetime.now(), driver.current_url, restricted, text_restriction, count_paragraphs, count_h1, count_h2, count_h3, head, texte]]))
-        
+        try:
+            for string in queues["carac"]["article_crawl"]["main"]:
+                if len(driver.find_elements_by_xpath("//" + string))>0:
+                    main = driver.find_element_by_xpath("//" + string)
+                    count_paragraphs = len(main.find_elements_by_tag_name("p"))
+                    count_h1 = "\n".join([x.text for x in main.find_elements_by_tag_name("h1")])
+                    count_h2 = "\n".join([x.text for x in main.find_elements_by_tag_name("h2")])
+                    count_h3 = "\n".join([x.text for x in main.find_elements_by_tag_name("h3")])
+                    texte = main.text
+                    break
+                
+        except Exception:
+            count_paragraphs = -1
+            count_h1 = -1
+            count_h2 = -1
+            count_h3 = -1
+            texte = ""
+            pass
+                
+        information = np.column_stack([datetime.now(), url, restricted, count_paragraphs, count_h1, count_h2, count_h3, head, texte])
+        time.sleep(random.randint(0,5))
         return information

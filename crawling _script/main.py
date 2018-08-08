@@ -33,7 +33,7 @@ class Main(object):
         
         crawl = Crawling()
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
-        self.cores   =  2#multiprocessing.cpu_count() - 1
+        self.cores   =  8#multiprocessing.cpu_count() - 1
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}
 
         self.driver = crawl.initialize_driver()
@@ -54,15 +54,13 @@ class Main(object):
                     URLCrawling(self.end_date, self.queues, self.driver)
                 elif url_article=="article":
                     self.cores   =  multiprocessing.cpu_count()
-                    self.queues["drivers"].put(self.driver)
                     ArticleCrawling(self.end_date, self.queues)
                 else:
                     print("Currently two actions handled: url extraction or article crawling")
 
 
     def specificities(self, journal):
-        
-        
+
         if journal == "lemonde":
             self.queues["carac"] = {"url_crawl":{"url": "https://www.lemonde.fr/", 
                                                 "in_liste": ['https://www.lemonde.fr/international/','https://www.lemonde.fr/politique/',
@@ -76,9 +74,12 @@ class Main(object):
                                                 "article_element":["article[@class='grid_12 alpha enrichi mgt8']", "article[@class='grid_12 alpha enrichi']"],
                                                 "fill_queue":["{0}.html",1]
                                                   },
-                                    "article_crawl": {"main" :["article[@class='article article_normal']", "div[@id='content']/div[2]"],
-                                                      "restricted" : ["div[@id='teaser_article']"],
-                                                      "head_article":[]}
+                                    "article_crawl": {"main" :["article[@class='article article_normal']", 
+                                                               "article[@class='article']", "div[@id='content']/div[2]", 
+                                                               "section[@class='video bg_fonce']", "div[@class='Content Content--restricted']"],
+                                                      "restricted" : ["div[@id='teaser_article']", "div[@class='Paywall']/div/div/div"],
+                                                      "head_article":["div[class='Header']"],
+                                                      "not_to_crawl" : ["/live/"]}
                                     }
             
         elif journal == "lefigaro":
@@ -90,7 +91,8 @@ class Main(object):
                                                 "fill_queue":[]},
                                     "article_crawl": {"main" :["article[@class='fig-content']"],
                                                       "restricted" : ["div[@class='fig-premium-paywall']/p"],
-                                                      "head_article": []}
+                                                      "head_article": [],
+                                                      "not_to_crawl" : ["/flash-"]}
                                     }
                 
         elif journal == "lesechos":
@@ -215,7 +217,7 @@ class Main(object):
                                                    "fill_queue":["?page={0}",1]},
                                      
                                      "article_crawl": {"main" :["div[@class='container-column clearfix']"],
-                                                      "restricted" : [],
+                                                      "restricted" : ["div[@class='paywall-deny']/div[2]"],
                                                       "head_article": ["div[@class='read-left-padding']"]}
                                     }
                                     
