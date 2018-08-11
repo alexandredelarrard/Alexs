@@ -33,7 +33,7 @@ class Main(object):
         
         crawl = Crawling()
         self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
-        self.cores   =  8#multiprocessing.cpu_count() - 1
+        self.cores   =  multiprocessing.cpu_count() - 1
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}
 
         self.driver = crawl.initialize_driver()
@@ -68,7 +68,7 @@ class Main(object):
                                                              'https://www.lemonde.fr/culture/',
                                                              'https://www.lemonde.fr/idees/','https://www.lemonde.fr/planete/',
                                                              'https://www.lemonde.fr/sport/','https://www.lemonde.fr/sciences/', 
-                                                             'https://www.lemonde.fr/campus/'], # missing: pixels, m-mag
+                                                             'https://www.lemonde.fr/campus/'], 
                                                 "time_element":[-4, -1, "%Y-%m-%d", "/"],
                                                 "href_element":["div[@class='grid_11 conteneur_fleuve omega']/div/h3/a"],
                                                 "article_element":["article[@class='grid_12 alpha enrichi mgt8']", "article[@class='grid_12 alpha enrichi']"],
@@ -76,10 +76,11 @@ class Main(object):
                                                   },
                                     "article_crawl": {"main" :["article[@class='article article_normal']", 
                                                                "article[@class='article']", "div[@id='content']/div[2]", 
-                                                               "section[@class='video bg_fonce']", "div[@class='Content Content--restricted']"],
+                                                               "section[@class='video bg_fonce']", "div[@class='Content Content--restricted']",
+                                                               "div[@class='container clearfix']"],
                                                       "restricted" : ["div[@id='teaser_article']", "div[@class='Paywall']/div/div/div"],
                                                       "head_article":["div[class='Header']"],
-                                                      "not_to_crawl" : ["/live/"]}
+                                                      "not_to_crawl" : ["/live/", "/portfolio/", "/visuel/"]}
                                     }
             
         elif journal == "lefigaro":
@@ -101,7 +102,7 @@ class Main(object):
                                                    "time_element":["article[@class='liste-article']/div/time"],
                                                    "href_element":["article[@class='liste-article']/h2/a"],
                                                    "article_element":["article[@class='liste-article']"],
-                                                   "fill_queue":["page={0}",1]},
+                                                   "fill_queue":["&page={0}",1]},
                                    "article_crawl": {"main" :["div[@class='main-content content-article']"],
                                                       "restricted" : ["div[@class='block-paywall-article degrade-texte']/div"],
                                                       "head_article": []}
@@ -116,7 +117,7 @@ class Main(object):
                                                                 "https://www.mediapart.fr/journal/dossiers"], # missing le studio, le club
                                                    "time_element":[-2, -1, "%d%m%y", "/"],
                                                    "href_element":["div[@data-type='article']/h3/a","li[@data-type='case']/h3/a"],
-                                                   "article_element":["div[@data-type='article']","li[@data-type='case']"],
+                                                   "article_element":["div[@data-type='article']","div[@data-type='lien-web']", "li[@data-type='case']"],
                                                    "fill_queue":["?page={0}",1]},
                                     "article_crawl": {"main" :["main[@class='global-wrapper']/div[2]/div"],
                                                       "restricted" : ["div[@class='content-article content-restricted']"],
@@ -228,6 +229,7 @@ class Main(object):
 
 if __name__ == "__main__":
      environment_variables()
-     Main(["article"], 
-          "2018-07-01",
-          ["lemonde", "liberation", "leparisien", "lesechos", "mediapart", "latribune", "lexpress", "lefigaro"]) # "humanite",
+     Main(["url"], 
+          "2000-01-01",
+          ["leparisien"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
+     

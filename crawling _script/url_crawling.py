@@ -116,17 +116,23 @@ class URLCrawling(Crawling):
          Depending on the number of days to crawl, the max_number of pages to crawl is capped
          The assumption is that there is 1 page of articles per day
          """
-         
+             
          cap_articles = (datetime.now() - self.end_date).days*3
          
          #### fill the queue with all possible urls
          if len(self.queues["carac"]["url_crawl"]["fill_queue"]) == 2:
              print("max pages to crawl for {0} : {1}".format(element, cap_articles))
-             for i in range(self.queues["carac"]["url_crawl"]["fill_queue"][1], cap_articles + 1):
-                 new_url = element+self.queues["carac"]["url_crawl"]["fill_queue"][0].format(i)
-                 self.queues["urls"].put(new_url)
+             
+             if self.journal == "lesechos":
+                 for i in range(cap_articles*7 + 1, 1, -1):
+                     new_url = element+self.queues["carac"]["url_crawl"]["fill_queue"][0].format(i)
+                     self.queues["urls"].put(new_url)
+             else:
+                 for i in range(self.queues["carac"]["url_crawl"]["fill_queue"][1], cap_articles + 1):
+                     new_url = element+self.queues["carac"]["url_crawl"]["fill_queue"][0].format(i)
+                     self.queues["urls"].put(new_url)
          else:
-             exec("self.fill_queue_url_%s(element)"%self.queues["carac"]["journal"])
+             exec("self.fill_queue_url_%s(element)"%self.journal)
         
 # =============================================================================
 #  Fill in url queue with sepecific cases
@@ -152,9 +158,10 @@ class URLCrawling(Crawling):
         #### fill the queue with all possible urls
         for date in delta_liste:
             self.driver.get(element + date + "/page-1")
+            time.sleep(2)
             try:
                 ul = self.driver.find_element_by_xpath("//ul[@class='pagination-archive pages']")
-                nbr_pages = len(ul.find_elements_by_tag_name("li"))
+                nbr_pages = int(ul.find_elements_by_tag_name("li")[-1].text)
                 for i in range(1, nbr_pages+1):
                     self.queues["urls"].put(element + date +"/page-%i"%i)
             except Exception:

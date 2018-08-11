@@ -12,7 +12,7 @@ import pandas as pd
 import os
 import glob
 from datetime import datetime
-import random
+
 
 try:
     from crawling import Crawling
@@ -62,16 +62,13 @@ class ArticleCrawling(Crawling):
                 data = pd.read_csv(f, encoding = "latin1")
             else:
                 data= pd.concat([data, pd.read_csv(f, encoding = "latin1")], axis=0)
-        liste = data["1"]
-        liste["0-1"] = data["1"].apply(lambda x : filtered_url(x, self.queues["carac"]["article_crawl"]["not_to_crawl"]))
-
-        self.liste_urls =  set(liste.loc[liste["0-1"] == 1, "1"].tolist())
-        print("total number of articles to crawl is {0}".format(len(self.liste_urls)))
+        data["0-1"] = data["1"].apply(lambda x : filtered_url(x, self.queues["carac"]["article_crawl"]["not_to_crawl"]))
+        self.liste_urls =  set(data.loc[data["0-1"] == 1, "1"].tolist())
+        print("total number of articles to crawl is {0} / {1}".format(len(self.liste_urls), data.shape[0]))
 
     
     def crawl_article(self, driver, queues):
         
-        url = driver.current_url
         restricted = []
         try:
             if len(queues["carac"]["article_crawl"]["restricted"]) > 0:    
@@ -116,6 +113,5 @@ class ArticleCrawling(Crawling):
             texte = ""
             pass
                 
-        information = np.column_stack([datetime.now(), url, restricted, count_paragraphs, count_h1, count_h2, count_h3, head, texte])
-        time.sleep(random.randint(0,5))
+        information = np.column_stack([datetime.now(), driver.current_url, restricted, count_paragraphs, count_h1, count_h2, count_h3, head, texte])
         return information

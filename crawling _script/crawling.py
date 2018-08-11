@@ -16,6 +16,7 @@ from threading import Thread, get_ident
 import numpy as np
 import glob
 import random
+import time
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
@@ -38,7 +39,7 @@ class Crawling(object):
         driver = webdriver.PhantomJS(executable_path= os.environ["DIR_PATH"] + "/drivers/phantomjs.exe", service_args=service_args)   
         return driver
     
-    def initialize_driver(self):
+    def initialize_driver_tor(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
@@ -50,27 +51,41 @@ class Crawling(object):
         firefox_profile.set_preference('disk-cache-size', 8000)
         firefox_profile.set_preference("http.response.timeout", 120)
         firefox_profile.set_preference("dom.disable_open_during_load", True);
-        firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents))]);
+        firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents) - 1)]);
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
         driver.set_page_load_timeout(300)     
         return driver
     
-    def initialize_driver_tor(self):
+    def initialize_driver(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
         """
-        firefox_profile = webdriver.FirefoxProfile()
+#        from stem.process import launch_tor
+        self.agents[random.randint(0,len(self.agents) - 1)]
+        
+        binary = FirefoxBinary(os.environ["USERPROFILE"] + '/Desktop/Tor Browser/Browser/firefox.exe')    
+        firefox_profile = FirefoxProfile(os.environ["USERPROFILE"] + '/Desktop/Tor Browser/Browser/TorBrowser/Data/Browser/profile.default')
+#        tor_process = launch_tor(tor_cmd=os.environ["USERPROFILE"] + '/Desktop/Tor Browser/Browser/firefox.exe', torrc_path=os.environ["USERPROFILE"] + '/Desktop/Tor Browser/Browser/TorBrowser/Data/Browser/profile.default')
+        
         firefox_profile.set_preference('permissions.default.stylesheet', 2)
         firefox_profile.set_preference('permissions.default.image', 2)
         firefox_profile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so', 'false')
         firefox_profile.set_preference('disk-cache-size', 8000)
-        firefox_profile.set_preference("http.response.timeout", 60)
-        firefox_profile.set_preference("dom.disable_open_during_load", True);
+        firefox_profile.set_preference("http.response.timeout", 120)
+        firefox_profile.set_preference("dom.disable_open_during_load", True)
+#        firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents) - 1)])
         
-        driver = TorBrowserDriver(tbb_fx_binary_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.exe", tbb_profile_path = os.environ["DIR_PATH"] + "/webdriver/", tbb_logfile_path = os.environ["DIR_PATH"] + "/webdriver/tor.log")
+        firefox_profile.set_preference('network.proxy.type', 1)
+        firefox_profile.set_preference('network.proxy.socks', '127.0.0.1')
+        firefox_profile.set_preference('network.proxy.socks_port', 9051)
+        
+        driver = webdriver.Firefox(firefox_profile= firefox_profile, firefox_binary= binary)
+        
+        driver.delete_all_cookies()
+        driver.set_page_load_timeout(300)    
         return driver
         
     
@@ -98,7 +113,7 @@ class Crawling(object):
         options.add_argument('start-maximized') # 
         options.add_argument('disable-infobars')
         options.add_argument("--disable-extensions")
-        options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents))]))
+        options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents) - 1)]))
         
         service_args =["--verbose", "--log-path={0}".format(os.environ["DIR_PATH"] + "/webdriver/chrome.log")]
         
@@ -134,9 +149,10 @@ class Crawling(object):
         while True:
             driver = queues["drivers"].get()
             url = queue_url.get()
-            self.handle_timeout(driver, url)
+            driver = self.handle_timeout(driver, url)
                 
             information, driver = self.handle_information(function, driver, queues, url, 0)
+            time.sleep(random.uniform(0,1))
             
             queues["drivers"].put(driver)
             queue_url.task_done()
@@ -151,7 +167,7 @@ class Crawling(object):
                          queue_url.task_done()
                          
                 ### if queue has more than X elements in queue then save elements to have a queue size not too big
-                if queue_results.qsize()>100:
+                if queue_results.qsize()>100 or queue_url.qsize() == 0:
                     self.save_results(queues["carac"]["journal"])
    
     
@@ -173,9 +189,11 @@ class Crawling(object):
     def handle_timeout(self, driver, url):
         try:
             driver.get(url)
+            driver.execute_script("window.alert = function() {};")
         except Exception:
-            driver.close()
+            driver.quit()
             driver = self.initialize_driver()
+            time.sleep(5)
             driver = self.handle_timeout(driver, url)
         return driver
         
