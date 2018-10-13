@@ -14,6 +14,7 @@ import locale
 locale.setlocale(locale.LC_ALL, 'fr_FR')
 import dateparser
 
+
 try:
     from crawling import Crawling
 except Exception:
@@ -25,11 +26,11 @@ except Exception:
 
 class URLCrawling(Crawling):
     
-    def __init__(self, min_date, queues, driver):
+    def __init__(self,  queues, driver):
     
         Crawling.__init__(self)
         self.url= queues["carac"]["url_crawl"]["url"]
-        self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
+        self.end_date = pd.to_datetime("01-01-2000", format = "%d-%m-%Y")
         self.driver = driver 
         self.queues = queues
         self.journal = queues["carac"]["journal"]

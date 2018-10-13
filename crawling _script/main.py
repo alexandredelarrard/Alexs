@@ -8,7 +8,6 @@ Created on Thu Jul  5 11:30:04 2018
 import os
 import configparser
 import platform
-import pandas as pd
 import multiprocessing
 from queue import Queue
 from datetime import datetime
@@ -29,11 +28,10 @@ def environment_variables():
 
 class Main(object):
     
-    def __init__(self, pick_url_article, min_date, journals):
+    def __init__(self, pick_url_article, journals):
         
         crawl = Crawling()
-        self.end_date = pd.to_datetime(min_date, format = "%Y-%m-%d")
-        self.cores   =  multiprocessing.cpu_count() - 1
+        self.cores   = crawl.cores
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}
 
         self.driver = crawl.initialize_driver()
@@ -51,10 +49,10 @@ class Main(object):
             for url_article in pick_url_article:
                 self.queues["carac"]["url_article"] = url_article
                 if url_article=="url":
-                    URLCrawling(self.end_date, self.queues, self.driver)
+                    URLCrawling(self.queues, self.driver)
                 elif url_article=="article":
                     self.cores   =  multiprocessing.cpu_count()
-                    ArticleCrawling(self.end_date, self.queues)
+                    ArticleCrawling(self.queues)
                 else:
                     print("Currently two actions handled: url extraction or article crawling")
 
@@ -71,7 +69,9 @@ class Main(object):
                                                              'https://www.lemonde.fr/campus/'], 
                                                 "time_element":[-4, -1, "%Y-%m-%d", "/"],
                                                 "href_element":["div[@class='grid_11 conteneur_fleuve omega']/div/h3/a"],
-                                                "article_element":["article[@class='grid_12 alpha enrichi mgt8']", "article[@class='grid_12 alpha enrichi']"],
+                                                "article_element":["article[@class='grid_12 alpha enrichi mgt8']", 
+                                                                   "article[@class='grid_12 alpha enrichi']",
+                                                                   "div[@class='applat_contenu']"],
                                                 "fill_queue":["{0}.html",1]
                                                   },
                                     "article_crawl": {"main" :["article[@class='article article_normal']", 
@@ -90,20 +90,22 @@ class Main(object):
                                                 "href_element":["div[@class='SiteMap']/a"],
                                                 "article_element":["div[@class='SiteMap']/a"],
                                                 "fill_queue":[]},
-                                    "article_crawl": {"main" :["article[@class='fig-content']"],
+                                    "article_crawl": {"main" :["article[@class='fig-content']", "article[@class='fig-article fig-article-has-source']",
+                                                               "div[@itemprop='articleBody']"],
                                                       "restricted" : ["div[@class='fig-premium-paywall']/p"],
-                                                      "head_article": [],
+                                                      "head_article": ["div[@class='s24-art-header s24-art-header--no-img']"],
                                                       "not_to_crawl" : ["/flash-"]}
                                     }
                 
         elif journal == "lesechos":
             self.queues["carac"] = {"url_crawl":{ "url": "https://www.lesechos.fr/recherche", 
-                                                   "in_liste": ["http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&date1={0}&date2={1}".format(self.end_date.strftime("%Y-%m-%d"), datetime.now().strftime("%Y-%m-%d"))],
+                                                   "in_liste": ["http://recherche.lesechos.fr/recherche.php?exec=2&texte=&dans=touttexte&ftype=-1&date1={0}&date2={1}".format("2000-01-01", datetime.now().strftime("%Y-%m-%d"))],
                                                    "time_element":["article[@class='liste-article']/div/time"],
                                                    "href_element":["article[@class='liste-article']/h2/a"],
                                                    "article_element":["article[@class='liste-article']"],
                                                    "fill_queue":["&page={0}",1]},
-                                   "article_crawl": {"main" :["div[@class='main-content content-article']"],
+                                   "article_crawl": {"main" :["div[@class='main-content content-article']", "article[@class='centre']/section", "div[@class='centre wrapper']/article/section", "article[@id='article']", "div[@class='contenu_article']",
+                                                              "main/div/section/div[2]/div[2]/div/div", "article[@class='article']"],
                                                       "restricted" : ["div[@class='block-paywall-article degrade-texte']/div"],
                                                       "head_article": []}
                                     }
@@ -217,9 +219,9 @@ class Main(object):
                                                                       "ul[@class='live-items']/li/a/div[2]"],
                                                    "fill_queue":["?page={0}",1]},
                                      
-                                     "article_crawl": {"main" :["div[@class='container-column clearfix']"],
+                                     "article_crawl": {"main" :[ "div[@class='wide-column width-padded-left']", "div[@class='width-wrap']/article/div[2]", "div[@class='container-column clearfix']"],
                                                       "restricted" : ["div[@class='paywall-deny']/div[2]"],
-                                                      "head_article": ["div[@class='read-left-padding']"]}
+                                                      "head_article": ["div[@class='read-left-padding']", "header[@class='article-header']"]}
                                     }
                                     
         else:
@@ -227,9 +229,9 @@ class Main(object):
         
         self.queues["carac"]["journal"] = journal
 
+
 if __name__ == "__main__":
      environment_variables()
-     Main(["url"], 
-          "2000-01-01",
-          ["leparisien"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
+     Main(["article"], 
+          ["lefigaro"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
      

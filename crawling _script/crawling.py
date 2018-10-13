@@ -24,7 +24,7 @@ from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 class Crawling(object):
     
     def __init__(self):
-        self.cores = multiprocessing.cpu_count() - 1 ### allow a main thread
+        self.cores = int(multiprocessing.cpu_count()*2.5)### allow a main thread
         self.agents =  pd.read_csv(os.environ["DIR_PATH"] + "/webdriver/agents.csv")["agents"].tolist()
     
     def initialize_driver_phjs(self):
@@ -39,7 +39,8 @@ class Crawling(object):
         driver = webdriver.PhantomJS(executable_path= os.environ["DIR_PATH"] + "/drivers/phantomjs.exe", service_args=service_args)   
         return driver
     
-    def initialize_driver_tor(self):
+    
+    def initialize_driver_chrome(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
@@ -58,7 +59,7 @@ class Crawling(object):
         driver.set_page_load_timeout(300)     
         return driver
     
-    def initialize_driver(self):
+    def initialize_driver_tor(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
         parameters are here to not load images and keep the default css --> make page loading faster
@@ -89,7 +90,7 @@ class Crawling(object):
         return driver
         
     
-    def initialize_driver_chrome(self):
+    def initialize_driver(self):
         """
         Initialize the web driver with chrome driver as principal driver chromedriver.exe, headless means no open web page. But seems slower than firefox driver  
         parameters are here to not load images and keep the default css --> make page loading faster
@@ -97,17 +98,20 @@ class Crawling(object):
         
         options = Options()
         prefs = {"profile.managed_default_content_settings.images":2,
+#                 'disk-cache-size': 8000,
                  "profile.default_content_setting_values.notifications":2,
                  "profile.managed_default_content_settings.stylesheets":2,
                  "profile.managed_default_content_settings.cookies":2,
-                 "profile.managed_default_content_settings.javascript":1,
-                 "profile.managed_default_content_settings.plugins":1,
+                 "profile.managed_default_content_settings.javascript":2,
+                 "profile.managed_default_content_settings.plugins":2,
                  "profile.managed_default_content_settings.popups":2,
                  "profile.managed_default_content_settings.geolocation":2,
                  "profile.managed_default_content_settings.media_stream":2,
                  }
+        
         options.add_experimental_option("prefs",prefs)
-        options.add_argument("--headless") # Runs Chrome in headless mode.
+#        options.add_argument("--headless") # Runs Chrome in headless mode.
+        options.add_argument("--incognito")
         options.add_argument('--no-sandbox') # Bypass OS security model
         options.add_argument('--disable-gpu')  # applicable to windows os only
         options.add_argument('start-maximized') # 
@@ -131,7 +135,7 @@ class Crawling(object):
     def close_queue_drivers(self):
         for i in range(self.driver_queue.qsize()):
             driver = self.driver_queue.get()
-            driver.close()
+            driver.quit()
 
 
     def start_threads_and_queues(self, function):
@@ -152,20 +156,14 @@ class Crawling(object):
             driver = self.handle_timeout(driver, url)
                 
             information, driver = self.handle_information(function, driver, queues, url, 0)
-            time.sleep(random.uniform(0,1))
+            time.sleep(random.uniform(0.1,0.4))
             
             queues["drivers"].put(driver)
             queue_url.task_done()
             
             if information.shape[0] > 0:
                 queue_results.put(information) 
-            
-                if self.check_in_date(information, url):
-                    ### empty the queue of all its urls
-                    while queue_url.qsize()>0:
-                         queue_url.get()
-                         queue_url.task_done()
-                         
+                    
                 ### if queue has more than X elements in queue then save elements to have a queue size not too big
                 if queue_results.qsize()>100 or queue_url.qsize() == 0:
                     self.save_results(queues["carac"]["journal"])
@@ -175,8 +173,8 @@ class Crawling(object):
         try:
             information = function(driver, queues)
         except Exception as e:
-            if compteur < 2: 
-                driver.close()
+            if compteur < 0: 
+                driver.quit()
                 driver = self.initialize_driver()
                 driver = self.handle_timeout(driver, url)
                 information, driver = self.handle_information(function, driver, queues, url, compteur +1)
@@ -231,11 +229,3 @@ class Crawling(object):
         article_bdd = pd.DataFrame(articles)
         article_bdd.to_csv(path_name, index=False)
         print("{0} data extracted".format(article_bdd.shape))
-
-      
-    def check_in_date(self, information, url):
-        ### 0 is always the date column by convention, 1 is always the url by convention
-        if min(pd.to_datetime(information[:,0])) < self.end_date: 
-            return True
-        return False
-    
