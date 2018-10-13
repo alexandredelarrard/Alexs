@@ -51,7 +51,7 @@ class ArticleCrawling(Crawling):
         shape = data.shape[0]
         index = data["url"].apply(lambda x  : True if  "/www.dailymotion.com/video/" not in x else False)
         data= data[index]
-        self.liste_urls =  data['url'].tolist()
+        self.liste_urls =  data['url'].apply(lambda x: x.replace("http://www.","https://www.")).tolist()
         
         #### already done:
         files= glob.glob( "/".join([os.environ["DIR_PATH"], "data", self.journal, self.queues["carac"]["url_article"], "*", "extraction_*.csv"]) )
@@ -64,7 +64,7 @@ class ArticleCrawling(Crawling):
                         total = pd.concat([total, pd.read_csv(f, error_bad_lines=False)], axis=0)
                 except Exception:
                     print(f)
-            already_crawled = total["0"]
+            already_crawled = total["0"].apply(lambda x: x.replace("http://www.","https://www."))
             self.liste_urls = list(set(self.liste_urls) - set(already_crawled))
         else:
             self.liste_urls = data["url"].tolist()
