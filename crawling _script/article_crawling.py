@@ -47,7 +47,7 @@ class ArticleCrawling(Crawling):
         
     def get_liste_urls(self):
         
-        data = pd.read_csv(os.environ["DIR_PATH"] + "/data/clean_data/history/%s_history.csv"%self.journal)
+        data = pd.read_csv(os.environ["DIR_PATH"] + "/data/clean_data/url/history/%s_history.csv"%self.journal)
         shape = data.shape[0]
         index = data["url"].apply(lambda x  : True if  "/www.dailymotion.com/video/" not in x else False)
         data= data[index]

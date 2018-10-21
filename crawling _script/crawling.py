@@ -117,7 +117,7 @@ class Crawling(object):
         options.add_argument('start-maximized') # 
         options.add_argument('disable-infobars')
         options.add_argument("--disable-extensions")
-        options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents) - 1)]))
+#        options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents) - 1)]))
         
         service_args =["--verbose", "--log-path={0}".format(os.environ["DIR_PATH"] + "/webdriver/chrome.log")]
         
@@ -227,5 +227,5 @@ class Crawling(object):
                 articles = np.concatenate((articles,article), axis=0)
                  
         article_bdd = pd.DataFrame(articles)
-        article_bdd.to_csv(path_name, index=False)
+        article_bdd.to_csv(path_name, index=False, sep=', ')
         print("{0} data extracted".format(article_bdd.shape))

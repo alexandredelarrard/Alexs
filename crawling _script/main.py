@@ -121,7 +121,7 @@ class Main(object):
                                                    "href_element":["div[@data-type='article']/h3/a","li[@data-type='case']/h3/a"],
                                                    "article_element":["div[@data-type='article']","div[@data-type='lien-web']", "li[@data-type='case']"],
                                                    "fill_queue":["?page={0}",1]},
-                                    "article_crawl": {"main" :["main[@class='global-wrapper']/div[2]/div"],
+                                    "article_crawl": {"main" :["main[@class='global-wrapper']/div[2]/div", "div[@class='accur8-desktop accur8-tablet accurWidth-desktop accurWidth-tablet']/div"],
                                                       "restricted" : ["div[@class='content-article content-restricted']"],
                                                       "head_article": ["main[@class='global-wrapper']/div/div"]}
                                     }
@@ -135,9 +135,10 @@ class Main(object):
                                                    "href_element":["article/section/h2/a"],
                                                    "article_element":["article"],
                                                    "fill_queue":[]},
-                                    "article_crawl": {"main" :["section[@class='contenu-article clearfix']/div"],
+                                    "article_crawl": {"main" :["div[@class='article-content-wrapper']"],
                                                       "restricted" : [],
-                                                      "head_article": ["div[@class='article-title-wrapper']", "section[@class='chapo']"]}
+                                                      "head_article": ["div[@class='article-title-wrapper']"],
+                                                      "1st_paragraph": ["div[@class='article-content-wrapper']/section"]}
                                     }
                                     
         elif journal == "leparisien":
@@ -233,5 +234,9 @@ class Main(object):
 if __name__ == "__main__":
      environment_variables()
      Main(["article"], 
-          ["lefigaro"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
+          ["latribune"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
      
+     
+     #### https://www.letemps.ch
+     #### https://www.marianne.net/auteur/magazine-marianne
+     #### https://charliehebdo.fr/
