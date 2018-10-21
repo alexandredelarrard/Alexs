@@ -24,7 +24,7 @@ from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 class Crawling(object):
     
     def __init__(self):
-        self.cores = int(multiprocessing.cpu_count()*2) 
+        self.cores = int(multiprocessing.cpu_count()*2.5) 
         self.agents =  pd.read_csv(os.environ["DIR_PATH"] + "/webdriver/agents.csv")["agents"].tolist()
 
     def initialize_driver(self):
@@ -85,27 +85,27 @@ class Crawling(object):
         queue_url = queues["urls"]
         queue_results = queues["results"]
         
+        #### extract all articles
         while True:
             driver = queues["drivers"].get()
             url = queue_url.get()
-            driver = self.handle_timeout(driver, url)
+            driver.get(url["url"])
                 
             information, driver = self.handle_information(function, driver, queues, url, 0)
-            time.sleep(random.uniform(0.1,0.3))
             
             queues["drivers"].put(driver)
             queue_url.task_done()
             
             queue_results.put(information) 
+        
+        #### kill drivers
+        while queues["drivers"].qsize()> 0:
+            driver = queues["drivers"].get()
+            driver.quit()
                     
-            ### if queue has more than X elements in queue then save elements to have a queue size not too big
-#            if queue_results.qsize() > 500 or queue_url.qsize() == 0:
-#                self.save_results()
-#   
-    
     def handle_information(self, function, driver, queues, url, compteur):
         try:
-            information = function(driver, queues)
+            information = function(driver, queues, url["date"])
         except Exception as e:
             if compteur < 0: 
                 driver.quit()
@@ -117,18 +117,7 @@ class Crawling(object):
                 return np.array([]), driver
             
         return information, driver
-                        
-    def handle_timeout(self, driver, url):
-#        try:
-            driver.get(url)
-#            driver.execute_script("window.alert = function() {};")
-#        except Exception:
-#            driver.quit()
-#            driver = self.initialize_driver()
-#            time.sleep(5)
-#            driver = self.handle_timeout(driver, url)
-            return driver
-        
+    
     
     def save_results(self):
         
@@ -141,16 +130,13 @@ class Crawling(object):
         if not os.path.isdir("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article"])):
             os.makedirs("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article"]))
             
-        if not os.path.isdir("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", datetime.now().strftime("%Y-%m-%d")])):
-            os.makedirs("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", datetime.now().strftime("%Y-%m-%d")]))
-            
         #### if reached the min date then empty the queue of urls and save all results 
-        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", datetime.now().strftime("%Y-%m-%d"), "extraction_0.csv"]) 
-        if os.path.isfile(path_name):
-            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", datetime.now().strftime("%Y-%m-%d"), "*.csv"])))
-            path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", datetime.now().strftime("%Y-%m-%d"), "extraction_{0}.csv".format(len_files)]) 
-        
-        cols = ["journal", "url", "restricted", "titre", "auteur", "article", "categorie", "description_article"]
+        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.now().strftime("%Y-%m-%d"))]) 
+#        if os.path.isfile(path_name):
+#            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "*.csv"])))
+#            path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))]) 
+#        
+        cols = ["date", "journal", "url", "restricted", "titre", "auteur", "article", "categorie", "description_article"]
         i = 0
         while self.queues["results"].qsize()>0:
             article = self.queues["results"].get()
@@ -159,6 +145,7 @@ class Crawling(object):
                 i +=1
             else:
                 articles = pd.concat([articles, pd.DataFrame([article], columns = cols)], axis=0)
-                 
+           
+        articles = articles.drop_duplicates("url")
         articles.to_csv(path_name, index=False, sep='#')
         print("{0} data extracted".format(articles.shape))

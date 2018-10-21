@@ -14,6 +14,9 @@ from queue import Queue
 from url_crawling import UrlCrawling
 from article_crawling import ArticleCrawling
 import pandas as pd
+import json
+import pymongo
+
 
 def environment_variables():
     configParser = configparser.RawConfigParser() 
@@ -23,12 +26,13 @@ def environment_variables():
         configFilePath = os.environ["USERPROFILE"] + '/config_alexs.txt'
     configParser.read(configFilePath)
     os.environ["DIR_PATH"] = configParser.get("config-Alexs", "project_path")
-    
+    return configParser
 
 class Main(object):
     
     def __init__(self):
         
+        self.config = environment_variables()
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}        
         self.specificities()
         self.main()
@@ -38,21 +42,29 @@ class Main(object):
         
         time_tot = time.time()
         
+        #### url crawling
         t0 = time.time()
         self.liste_urls = UrlCrawling(self.queues).main_url_crawling()
         print("[{0}] Crawling in {1}s\n {2} articles to crawl".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0, self.liste_urls.shape[0]))
         
-        self.liste_urls = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\continuous_run\url\2018-10-20.csv")
+        #### article crawling
         t0 = time.time()
-        ArticleCrawling(self.queues, self.liste_urls["url"].tolist()).main_article_crawling()
+        ArticleCrawling(self.queues, self.liste_urls).main_article_crawling()
         print("[{0}] Crawling in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
-                
-        print("total crawling time {0}s".format(time.time() - time_tot))
+            
+        new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d")), sep = "#")
+        new_articles = new_articles.to_dict(orient='records')
+            
+        #### push to mongodb
+        connection = pymongo.MongoClient(self.config.get("config-Alexs", "mongodb"))
+        db=connection[self.config.get("config-Alexs", "mongo_db_name")]
+        collection = db.get_collection("articles") ### ---> collection names print(db.collection_names())
         
-        #### kill drivers
-        while self.queues["drivers"].qsize()> 0:
-            driver = self.queues["drivers"].get()
-            driver.quit()
+        collection.delete_many({})
+        collection.insert_many(new_articles)
+        
+        print("total updating time {0}s".format(time.time() - time_tot))
+
 
     def specificities(self):
 

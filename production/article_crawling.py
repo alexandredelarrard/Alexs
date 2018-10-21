@@ -7,15 +7,8 @@ Created on Fri Aug  3 10:55:26 2018
 
 
 import time
-import numpy as np
-import os
-
-try:
-    from crawling import Crawling
-except Exception:
-    import sys
-    sys.path.append(os.environ["DIR_PATH"] + "/script/crawling_script")
-    from crawling import Crawling
+from queue import Queue
+from crawling import Crawling
 
 
 class ArticleCrawling(Crawling):
@@ -25,6 +18,7 @@ class ArticleCrawling(Crawling):
         """
         Crawling.__init__(self)
         self.queues = queues
+        self.queues["results"] = Queue()
         self.liste_urls = urls 
 
         for i in range(self.cores):
@@ -38,15 +32,16 @@ class ArticleCrawling(Crawling):
          
         self.start_threads_and_queues(self.crawl_article)
         t0 = time.time()
-        for url in self.liste_urls:
-            self.queues["urls"].put(url)
+        for item in self.liste_urls.to_dict(orient='records'):
+            self.queues["urls"].put(item)
         print('*** Main thread waiting')
         self.queues["urls"].join()
         print('*** Done in {0}'.format(time.time() - t0))
         self.save_results()
              
         
-    def crawl_article(self, driver, queues):
+    def crawl_article(self, driver, queues, date):
+        
         url = driver.current_url
         journal = self.deduce_journal(url)
         queue = queues[journal]
@@ -57,11 +52,9 @@ class ArticleCrawling(Crawling):
             #         Is article restricted
             # =============================================================================
             restricted = 0
-            try:
-                element_restrict = driver.find_elements_by_xpath("//" + queue["restricted"])
-                restricted = 1 if len(element_restrict) >0 else 0
-            except Exception:
-                pass 
+            for string in queue["restricted"]:
+                 if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    restricted = 1
                 
             # =============================================================================
             #             Article Title
@@ -108,9 +101,9 @@ class ArticleCrawling(Crawling):
                     article += driver.find_element_by_xpath("//" + string).text
                     break
 
-            information = [journal, driver.current_url, restricted, str(title), str(author), str(article), str(categorie), str(description_article)]
+            information = [date, journal, driver.current_url, restricted, str(title), str(author), str(article), str(categorie), str(description_article)]
         else:
-            information = [journal, driver.current_url, '', '', '', '', '', '']
+            information = [date, journal, driver.current_url, '', '', '', '', '', '']
             
         return information
     
