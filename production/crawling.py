@@ -54,6 +54,8 @@ class Crawling(object):
         options.add_argument("--disable-extensions")
         options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents) - 1)]))
         
+        
+        
         service_args =["--verbose", "--log-path={0}".format(os.environ["DIR_PATH"] + "/webdriver/chrome.log")]
         
         driver = webdriver.Chrome(executable_path= os.environ["DIR_PATH"] + "/webdriver/chromedriver.exe", 
@@ -90,7 +92,8 @@ class Crawling(object):
             driver = queues["drivers"].get()
             url = queue_url.get()
             driver.get(url["url"])
-                
+            time.sleep(1)    
+            
             information, driver = self.handle_information(function, driver, queues, url, 0)
             
             queues["drivers"].put(driver)
@@ -102,19 +105,24 @@ class Crawling(object):
         while queues["drivers"].qsize()> 0:
             driver = queues["drivers"].get()
             driver.quit()
+            queues["drivers"].task_done()
                     
+            
     def handle_information(self, function, driver, queues, url, compteur):
         try:
             information = function(driver, queues, url["date"])
+            if information[-3] == "" and information[3] != "": ### titre mais pas d article
+                raise Exception
+                
         except Exception as e:
-            if compteur < 0: 
+            if compteur < 1: 
                 driver.quit()
                 driver = self.initialize_driver()
-                driver = self.handle_timeout(driver, url)
+                driver.get(url["url"])
                 information, driver = self.handle_information(function, driver, queues, url, compteur +1)
             else: 
                 print("thread : {0}, url : {1}, error : {2}".format(get_ident(), driver.current_url, e))
-                return np.array([]), driver
+                return information, driver
             
         return information, driver
     
@@ -135,7 +143,7 @@ class Crawling(object):
 #        if os.path.isfile(path_name):
 #            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "*.csv"])))
 #            path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))]) 
-#        
+        
         cols = ["date", "journal", "url", "restricted", "titre", "auteur", "article", "categorie", "description_article"]
         i = 0
         while self.queues["results"].qsize()>0:
@@ -149,3 +157,5 @@ class Crawling(object):
         articles = articles.drop_duplicates("url")
         articles.to_csv(path_name, index=False, sep='#')
         print("{0} data extracted".format(articles.shape))
+
+        return articles

@@ -16,6 +16,7 @@ from crawling import Crawling
 from url_crawling import URLCrawling
 from article_crawling import ArticleCrawling
 
+
 def environment_variables():
     configParser = configparser.RawConfigParser() 
     if platform.system() in  ["Darwin", "Linux"]: # Mac or Linux
@@ -39,7 +40,7 @@ class Main(object):
              self.queues["drivers"].put(crawl.initialize_driver())
         
         self.main(journals, pick_url_article)
-
+        
 
     def main(self, journals, pick_url_article):
         
@@ -135,11 +136,14 @@ class Main(object):
                                                    "href_element":["article/section/h2/a"],
                                                    "article_element":["article"],
                                                    "fill_queue":[]},
-                                    "article_crawl": {"main" :["div[@class='article-content-wrapper']"],
-                                                      "restricted" : [],
-                                                      "head_article": ["div[@class='article-title-wrapper']"],
-                                                      "1st_paragraph": ["div[@class='article-content-wrapper']/section"]}
-                                    }
+                                    "article_crawl": {"article" :["div[@class='article-content-wrapper']"],
+                                                   "restricted" : [],
+                                                   "title": ["h1[@itemprop='Headline']"],
+                                                   "author":["span[@itemprop='name']"],
+                                                   "categorie": ["div[@class='article-title-wrapper']/ol/li[2]"],
+                                                   "description_article":["section[@class='chapo']"],
+                                                   "not_to_crawl" : []}
+                                                    }
                                     
         elif journal == "leparisien":
             self.queues["carac"] = {"url_crawl":{ "url": "http://www.leparisien.fr/", 

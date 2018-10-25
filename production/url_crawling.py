@@ -15,7 +15,7 @@ import xml.etree.cElementTree as ET
 import requests
 warnings.filterwarnings("ignore")
 
-from crawling import Crawling
+from production.crawling import Crawling
 
 def environment_variables():
     configParser = configparser.RawConfigParser() 
@@ -66,6 +66,7 @@ class UrlCrawling(Crawling):
         ### suppress all urls crawled last day
         previous_urls = pd.read_csv(self.path_url+ "/{0}.csv".format((self.today - timedelta(days = 1)).strftime("%Y-%m-%d")))["url"].tolist()
         total_urls = total_urls.loc[~total_urls["url"].isin(previous_urls)]    
+        total_urls = total_urls.drop_duplicates("url")
         
         total_urls.to_csv(self.path_url + "/{0}.csv".format(self.today.strftime("%Y-%m-%d")), index = False)
         

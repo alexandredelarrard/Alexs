@@ -8,7 +8,7 @@ Created on Fri Aug  3 10:55:26 2018
 
 import time
 from queue import Queue
-from crawling import Crawling
+from production.crawling import Crawling
 
 
 class ArticleCrawling(Crawling):
@@ -37,7 +37,8 @@ class ArticleCrawling(Crawling):
         print('*** Main thread waiting')
         self.queues["urls"].join()
         print('*** Done in {0}'.format(time.time() - t0))
-        self.save_results()
+        articles = self.save_results()
+        return articles
              
         
     def crawl_article(self, driver, queues, date):
@@ -69,29 +70,27 @@ class ArticleCrawling(Crawling):
             #             Article Categorie
             # =============================================================================
             categorie = ""
-            try:
-                categorie += driver.find_element_by_xpath("//" + queue["categorie"]).text 
-            except Exception:
-                pass
+            for string in queue["categorie"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    categorie += driver.find_element_by_xpath("//" + string).text 
+
             
             # =============================================================================
             #             Article Categorie
             # =============================================================================
             description_article = ""
-            try:
-                description_article += driver.find_element_by_xpath("//" + queue["description_article"]).text 
-            except Exception:
-                pass
+            for string in queue["description_article"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    description_article += driver.find_element_by_xpath("//" + string).text 
             
             # =============================================================================
             #             Article author
             # =============================================================================
             author = ""
-            try:
-                author += driver.find_element_by_xpath("//" + queue["author"]).text 
-            except Exception:
-                pass
-               
+            for string in queue["author"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    author += driver.find_element_by_xpath("//" + string).text 
+
             # =============================================================================
             #             Article content
             # =============================================================================

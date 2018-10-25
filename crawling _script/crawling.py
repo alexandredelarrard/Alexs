@@ -26,6 +26,8 @@ class Crawling(object):
     def __init__(self):
         self.cores = int(multiprocessing.cpu_count()*2.5)### allow a main thread
         self.agents =  pd.read_csv(os.environ["DIR_PATH"] + "/webdriver/agents.csv")["agents"].tolist()
+        
+        
     
     def initialize_driver_phjs(self):
         """
@@ -52,12 +54,17 @@ class Crawling(object):
         firefox_profile.set_preference('disk-cache-size', 8000)
         firefox_profile.set_preference("http.response.timeout", 120)
         firefox_profile.set_preference("dom.disable_open_during_load", True);
-        firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents) - 1)]);
+#        firefox_profile.set_preference("general.useragent.override", self.agents[random.randint(0,len(self.agents) - 1)]);
+        firefox_profile.set_preference("network.proxy.type", 1)
+        firefox_profile.set_preference("network.proxy.http", "74.121.75.201")
+        firefox_profile.set_preference("network.proxy.http_port", "61290")
+        firefox_profile.update_preferences()
     
         driver = webdriver.Firefox(firefox_profile=firefox_profile, log_path= os.environ["DIR_PATH"] + "/webdriver/geckodriver.log")#firefox_options=options, 
         driver.delete_all_cookies()
         driver.set_page_load_timeout(300)     
         return driver
+    
     
     def initialize_driver_tor(self):
         """
@@ -150,37 +157,45 @@ class Crawling(object):
         queue_url = queues["urls"]
         queue_results = queues["results"]
         
+        #### extract all articles
         while True:
             driver = queues["drivers"].get()
             url = queue_url.get()
-            driver = self.handle_timeout(driver, url)
-                
+            driver.get(url["url"])
+            time.sleep(1)    
+            
             information, driver = self.handle_information(function, driver, queues, url, 0)
-            time.sleep(random.uniform(0.1,0.4))
             
             queues["drivers"].put(driver)
             queue_url.task_done()
             
-            if information.shape[0] > 0:
-                queue_results.put(information) 
+            queue_results.put(information) 
+            
+            if queue_results.qsize()> 500:
+                self.save_results(queues["carac"]["journal"])
+        
+        #### kill drivers
+        while queues["drivers"].qsize()> 0:
+            driver = queues["drivers"].get()
+            driver.quit()
+            queues["drivers"].task_done()
                     
-                ### if queue has more than X elements in queue then save elements to have a queue size not too big
-                if queue_results.qsize()>100 or queue_url.qsize() == 0:
-                    self.save_results(queues["carac"]["journal"])
-   
-    
+            
     def handle_information(self, function, driver, queues, url, compteur):
         try:
-            information = function(driver, queues)
+            information = function(driver, queues, url["date"])
+#            if information[-3] == "" and information[3] != "": ### titre mais pas d article
+#                raise Exception
+                
         except Exception as e:
-            if compteur < 0: 
+            if compteur < 1: 
                 driver.quit()
                 driver = self.initialize_driver()
-                driver = self.handle_timeout(driver, url)
+                driver.get(url["url"])
                 information, driver = self.handle_information(function, driver, queues, url, compteur +1)
             else: 
                 print("thread : {0}, url : {1}, error : {2}".format(get_ident(), driver.current_url, e))
-                return np.array([]), driver
+                return information, driver
             
         return information, driver
                         
@@ -196,8 +211,7 @@ class Crawling(object):
         return driver
         
     
-    def save_results(self, journal):
-        
+    def check_path(self, journal):
         if not os.path.isdir(os.environ["DIR_PATH"] + "/data"):
             os.mkdir(os.environ["DIR_PATH"] + "/data")
             
@@ -210,22 +224,26 @@ class Crawling(object):
         if not os.path.isdir("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d")])):
             os.makedirs("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d")]))
             
+    def save_results(self, journal):
+
+        self.check_path(journal)
+        
         #### if reached the min date then empty the queue of urls and save all results 
         path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d"), "extraction_0.csv"]) 
         if os.path.isfile(path_name):
             len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d"), "*.csv"])))
             path_name = "/".join([os.environ["DIR_PATH"], "data", journal, self.queues["carac"]["url_article"], datetime.now().strftime("%Y-%m-%d"), "extraction_{0}.csv".format(len_files)]) 
             
-        articles = np.array([])
+        cols = ["date", "journal", "url", "restricted", "titre", "auteur", "article", "categorie", "description_article"]
         i = 0
         while self.queues["results"].qsize()>0:
             article = self.queues["results"].get()
             if i ==0:
-                articles = article
+                articles = pd.DataFrame([article], columns = cols)
                 i +=1
             else:
-                articles = np.concatenate((articles,article), axis=0)
+                articles = pd.concat([articles, pd.DataFrame([article], columns = cols)], axis=0)
                  
-        article_bdd = pd.DataFrame(articles)
-        article_bdd.to_csv(path_name, index=False, sep=', ')
-        print("{0} data extracted".format(article_bdd.shape))
+        articles = articles.drop_duplicates("url")
+        articles.to_csv(path_name, index=False, sep='#')
+        print("{0} data extracted".format(articles.shape))

@@ -38,7 +38,7 @@ class ArticleCrawling(Crawling):
         self.get_liste_urls()
         self.start_threads_and_queues(self.crawl_article)
         t0 = time.time()
-        for url in self.liste_urls:
+        for url in self.liste_urls.to_dict(orient='records'):
             self.queues["urls"].put(url)
         print('*** Main thread waiting')
         self.queues["urls"].join()
@@ -47,11 +47,12 @@ class ArticleCrawling(Crawling):
         
     def get_liste_urls(self):
         
-        data = pd.read_csv(os.environ["DIR_PATH"] + "/data/clean_data/url/history/%s_history.csv"%self.journal)
+        data = pd.read_csv(os.environ["DIR_PATH"] + "/data/history/url/history/%s_history.csv"%self.journal)
         shape = data.shape[0]
-        index = data["url"].apply(lambda x  : True if  "/www.dailymotion.com/video/" not in x else False)
+        index = data["url"].apply(lambda x  : True if  "/video/" not in x else False)
         data= data[index]
-        self.liste_urls =  data['url'].apply(lambda x: x.replace("http://www.","https://www.")).tolist()
+        self.liste_urls = data[["date", "url"]]
+#        self.liste_urls["short_url"] =  self.liste_urls['url'].apply(lambda x: x.replace("http://www.","https://www."))
         
         #### already done:
         files= glob.glob( "/".join([os.environ["DIR_PATH"], "data", self.journal, self.queues["carac"]["url_article"], "*", "extraction_*.csv"]) )
@@ -59,57 +60,80 @@ class ArticleCrawling(Crawling):
             for i, f in enumerate(files):
                 try:
                     if i ==0:
-                        total = pd.read_csv(f, error_bad_lines=False)
+                        total = pd.read_csv(f, sep= "#")
                     else:
-                        total = pd.concat([total, pd.read_csv(f, error_bad_lines=False)], axis=0)
+                        total = pd.concat([total, pd.read_csv(f, sep= "#")], axis=0)
                 except Exception:
                     print(f)
-            already_crawled = total["0"].apply(lambda x: x.replace("http://www.","https://www."))
-            self.liste_urls = list(set(self.liste_urls) - set(already_crawled))
-        else:
-            self.liste_urls = data["url"].tolist()
-            already_crawled = []
-            
-        shuffle(self.liste_urls)
-        print("total number of articles to crawl is {0} / {1}, already crawled : {2} articles".format(len(self.liste_urls), shape, len(already_crawled)))
+                    
+            self.liste_urls = pd.merge(data[["date", "url"]],total[["url", "article"]], on ="url", how= "left")
+            self.liste_urls = self.liste_urls.loc[pd.isnull(self.liste_urls["article"])][["date", "url"]]
+      
+        print("total number of articles to crawl is {0} / {1}, already crawled : {2} articles".format(self.liste_urls.shape[0], shape, total.shape[0]))
     
     
-    def crawl_article(self, driver, queues):
+    def crawl_article(self, driver, queues, date):
         
-        restricted = []
-        try:
-            if len(queues["carac"]["article_crawl"]["restricted"]) > 0:    
-                for string in queues["carac"]["article_crawl"]["restricted"]:
-                    element_restrict = driver.find_elements_by_xpath("//" + string)
-                    restricted.append(1 if len(element_restrict) >0 else 0)
-                restricted = max(restricted)    
-        except Exception:
+        url = driver.current_url
+        journal = self.journal
+        queue = queues["carac"]["article_crawl"]
+        
+        if len([1 for x in queue["not_to_crawl"] if x in url]) == 0:
+
+            # =============================================================================
+            #         Is article restricted
+            # =============================================================================
             restricted = 0
-            pass 
-        
-        ### have to reopen a driver with other IP because article is not fully available
-#        if restricted == 1:
-#            raise Exception
-        
-        if len(queues["carac"]["article_crawl"]["head_article"])>0:
-            head = ""
-            for string in queues["carac"]["article_crawl"]["head_article"]:
-                try:
-                    head += driver.find_element_by_xpath("//" + string).text + "\n"
-                except Exception:
-                    pass
-        else:
-            head = ""
-           
-        for string in queues["carac"]["article_crawl"]["main"]:
-            if len(driver.find_elements_by_xpath("//" + string))>0:
-                main = driver.find_element_by_xpath("//" + string)
-                count_paragraphs = len(main.find_elements_by_tag_name("p"))
-                count_h1 = "\n".join([x.text for x in main.find_elements_by_tag_name("h1")])
-                count_h2 = "\n".join([x.text for x in main.find_elements_by_tag_name("h2")])
-                count_h3 = "\n".join([x.text for x in main.find_elements_by_tag_name("h3")])
-                texte = main.text
-                break
+            for string in queue["restricted"]:
+                 if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    restricted = 1
                 
-        information = np.column_stack([driver.current_url, restricted, count_paragraphs, count_h1, count_h2, count_h3, str(head), str(texte.replace("\"","'"))])
+            # =============================================================================
+            #             Article Title
+            # =============================================================================
+            title = ""
+            for string in queue["title"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                        title += driver.find_element_by_xpath("//" + string).text
+                        break
+                    
+            # =============================================================================
+            #             Article Categorie
+            # =============================================================================
+            categorie = ""
+            for string in queue["categorie"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    categorie += driver.find_element_by_xpath("//" + string).text 
+
+            
+            # =============================================================================
+            #             Article Categorie
+            # =============================================================================
+            description_article = ""
+            for string in queue["description_article"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    description_article += driver.find_element_by_xpath("//" + string).text 
+            
+            # =============================================================================
+            #             Article author
+            # =============================================================================
+            author = ""
+            for string in queue["author"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    author += driver.find_element_by_xpath("//" + string).text 
+
+            # =============================================================================
+            #             Article content
+            # =============================================================================
+            article = ""
+            for string in queue["article"]:
+                if len(driver.find_elements_by_xpath("//" + string)) >0:
+                    article += driver.find_element_by_xpath("//" + string).text
+                    break
+
+            information = [date, journal, driver.current_url, restricted, str(title), str(author), str(article), str(categorie), str(description_article)]
+        else:
+            information = [date, journal, driver.current_url, '', '', '', '', '', '']
+            
         return information
+    
