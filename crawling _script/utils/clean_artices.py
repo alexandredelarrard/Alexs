@@ -145,9 +145,9 @@ def get_list_articles(path, media):
         for i, f in enumerate(files):
             try:
                 if i ==0:
-                    total = pd.read_csv(f, error_bad_lines=False, quotechar="\"")
+                    total = pd.read_csv(f, sep = "#", error_bad_lines=False)
                 else:
-                    total = pd.concat([total, pd.read_csv(f, error_bad_lines=False, quotechar="\"")], axis=0)
+                    total = pd.concat([total, pd.read_csv(f, sep = "#", error_bad_lines=False)], axis=0)
             except Exception:
                 print(f)
                 not_open.append(f)
@@ -278,5 +278,5 @@ def get_list_articles(path, media):
      pd.DataFrame(remaining_urls).to_csv(r"C:\Users\User\Documents\Alexs\data\clean_data\residus\%s\missing_urls.csv"%media, index = False)
 
 if __name__ == "__main__":
-    media = "lefigaro"
-    path = r"C:\Users\User\Documents\Alexs\data\extracted\%s"%media
+    media = "express"
+    path = r"C:\Users\User\Documents\Alexs\data\history\extracted\%s"%media

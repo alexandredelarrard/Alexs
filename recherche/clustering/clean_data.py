@@ -19,8 +19,8 @@ def clean_date(x):
     elif not pd.isnull(x[0]) and not pd.isnull(x[1]):
         return x[1]
     else:
-        return np.nan
-
+        return np.nan    
+    
 lesechos = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\history\articles\lesechos\articles.csv")
 urls = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\history\url\history\lesechos_history.csv")
 urls = urls[["url", "date"]]
@@ -62,9 +62,15 @@ liberation["journal"] = "liberation"
 lesechos = lesechos[["url", "date", "article"]]
 lesechos["journal"] = "lesechos"
 
+latribune = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\history\articles\latribune\articles.csv")
+latribune = latribune[["url", "date", "article"]]
+
+lexpress = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\history\articles\lexpress\articles.csv")
+lexpress = lexpress[["url", "date", "article"]]
+
 gc.collect()
 
-full = pd.concat([mediapart, liberation, lesechos, lemonde, humanite, lefigaro], axis= 0)
+full = pd.concat([mediapart, liberation, lesechos, lemonde, humanite, lefigaro, latribune, lexpress], axis= 0)
 full = full.drop_duplicates("url")
 full = full.loc[~pd.isnull(full["article"])]
 a = full["article"].apply(lambda x : len(x))

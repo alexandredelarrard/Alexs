@@ -24,11 +24,9 @@ from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 class Crawling(object):
     
     def __init__(self):
-        self.cores = int(multiprocessing.cpu_count()*2.5)### allow a main thread
+        self.cores = int(multiprocessing.cpu_count()*2.7)### allow a main thread
         self.agents =  pd.read_csv(os.environ["DIR_PATH"] + "/webdriver/agents.csv")["agents"].tolist()
         
-        
-    
     def initialize_driver_phjs(self):
         """
         Initialize the web driver with Firefox driver as principal driver geckodriver
@@ -171,7 +169,7 @@ class Crawling(object):
             
             queue_results.put(information) 
             
-            if queue_results.qsize()> 500:
+            if queue_results.qsize()> 1000:
                 self.save_results(queues["carac"]["journal"])
         
         #### kill drivers

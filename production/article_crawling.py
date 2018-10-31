@@ -73,7 +73,7 @@ class ArticleCrawling(Crawling):
             for string in queue["categorie"]:
                 if len(driver.find_elements_by_xpath("//" + string)) >0:
                     categorie += driver.find_element_by_xpath("//" + string).text 
-
+                    
             
             # =============================================================================
             #             Article Categorie

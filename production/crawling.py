@@ -54,8 +54,6 @@ class Crawling(object):
         options.add_argument("--disable-extensions")
         options.add_argument("user-agent={0}".format(self.agents[random.randint(0,len(self.agents) - 1)]))
         
-        
-        
         service_args =["--verbose", "--log-path={0}".format(os.environ["DIR_PATH"] + "/webdriver/chrome.log")]
         
         driver = webdriver.Chrome(executable_path= os.environ["DIR_PATH"] + "/webdriver/chromedriver.exe", 
@@ -139,11 +137,6 @@ class Crawling(object):
             os.makedirs("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article"]))
             
         #### if reached the min date then empty the queue of urls and save all results 
-        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.now().strftime("%Y-%m-%d"))]) 
-#        if os.path.isfile(path_name):
-#            len_files = len(glob.glob("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "*.csv"])))
-#            path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}_{1}.csv".format(len_files, datetime.now().strftime("%Y-%m-%d"))]) 
-        
         cols = ["date", "journal", "url", "restricted", "titre", "auteur", "article", "categorie", "description_article"]
         i = 0
         while self.queues["results"].qsize()>0:
@@ -155,7 +148,6 @@ class Crawling(object):
                 articles = pd.concat([articles, pd.DataFrame([article], columns = cols)], axis=0)
            
         articles = articles.drop_duplicates("url")
-        articles.to_csv(path_name, index=False, sep='#')
         print("{0} data extracted".format(articles.shape))
 
         return articles

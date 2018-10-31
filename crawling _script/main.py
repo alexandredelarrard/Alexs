@@ -182,9 +182,13 @@ class Main(object):
                                                    "href_element":["div[@class='groups']/div/a"],
                                                    "article_element":["div[@class='groups']/div"],
                                                    "fill_queue":["?p={0}",1]},
-                                    "article_crawl": {"main" :["div[@class='article_content']/div/div"],
+                                    "article_crawl": {"article" :["div[@class='article_container']"],
                                                       "restricted" : [],
-                                                      "head_article": ["div[@class='article_header_grid ']"]}
+                                                      "title": ["h1[@class='title_alpha']"],
+                                                      "author":["span[@itemprop='author']"],
+                                                      "categorie": ["span[@itemprop='name']"],
+                                                      "description_article":["h2[@itemprop='description']"],
+                                                      "not_to_crawl" : []}
                                     }
                                     
         elif journal == "humanite":
@@ -238,7 +242,7 @@ class Main(object):
 if __name__ == "__main__":
      environment_variables()
      Main(["article"], 
-          ["latribune"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
+          ["lexpress"]) # "mediapart", "leparisien", "lemonde", "liberation",  "lefigaro", "latribune", "lexpress", "humanite",
      
      
      #### https://www.letemps.ch

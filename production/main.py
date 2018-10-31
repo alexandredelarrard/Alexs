@@ -56,6 +56,8 @@ class Main(object):
         ### clustering articles
         t0 = time.time()
         new_articles = ClusteringArticles(new_articles).main_article_clustering()
+        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
+        new_articles.to_csv(path_name, index=False, sep='#')
         print("[{0}] Clustering in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
             
         #### push to mongodb
@@ -87,9 +89,9 @@ class Main(object):
                                   "description_article":["p[@class='fig-content__chapo']", "p[@class='fig-chapo']"],
                                   "not_to_crawl" : ["/story/ligue1"]}
                 
-        self.queues["lesechos"] = {"article" :["div[@class='paywall']", "div[@class='main-content content-article']"],
+        self.queues["lesechos"] = {"article" :["div[@class='paywall']", "div[@class='main-content content-article']", "div[@itemprop='articleBody']"],
                                    "restricted": [],
-                                  "title": ["h1[@class='title-article']"],
+                                  "title": ["h1[@class='title-article']","h1[@itemprop='Headline']"],
                                   "author":["div[@class='signature-article']"],
                                   "categorie": ["li[@class='opened']"],
                                   "description_article":["p[@itemprop='articleBody']"],

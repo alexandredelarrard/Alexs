@@ -19,20 +19,22 @@ from scipy.spatial.distance import cdist, squareform
 from sklearn.cluster import SpectralClustering
 import matplotlib.pyplot as plt
 import numpy as np
+from french_lefff_lemmatizer.french_lefff_lemmatizer import FrenchLefffLemmatizer
 
 tokenizer = RegexpTokenizer(r"\w+")
 stopword_set = set(stopwords.words("french")) 
-porter = PorterStemmer()
-wordnet_lemmatizer = WordNetLemmatizer()
+lemmetizer = FrenchLefffLemmatizer()
 
-def nlp_clean(data):
-   data = re.sub(r'\S*@\S*\s?', '', data, flags=re.MULTILINE) # remove email
-   data = re.sub(r'http\S+', '', data, flags=re.MULTILINE) # remove web addresses
-   new_str = data.lower().translate({ord(ch): None for ch in '0123456789'}) # lower + suppress numbers
-   dlist = tokenizer.tokenize(new_str) # punctuation
-   dlist = list(set(dlist).difference(stopword_set)) # stopwords
-   dlist = [wordnet_lemmatizer.lemmatize(wordnet_lemmatizer.lemmatize(word, "v"), "n") for word in dlist] ## stemming
-   return dlist
+def nlp_clean(text):
+    text = re.sub(r'\S*@\S*\s?', '', text.strip(), flags=re.MULTILINE) # remove email
+    text = re.sub(r'http\S+', '', text, flags=re.MULTILINE) # remove web addresses
+    text = re.sub(r'\(Crédits :.+\)', '', text, flags=re.MULTILINE) # remove credits from start of article
+    text = re.sub(r'www.\S+', '', text, flags=re.MULTILINE) # remove web addresses
+    text = text.lower().translate({ord(ch): None for ch in '0123456789'}) # lower + suppress numbers
+    dlist = tokenizer.tokenize(text) # punctuation
+#    dlist = list(set(dlist).difference(stopword_set)) # stopwords
+    dlist = [lemmetizer.lemmatize(lemmetizer.lemmatize(word, "v"), "n") for word in dlist] ## stemming
+    return dlist
 
 
 class LabeledLineSentence(object):
@@ -49,26 +51,29 @@ class LabeledLineSentence(object):
             
 def train_doc2vec(full):
     
-    articles = full["article"].tolist()
-    id_list = range(full.shape[0])
+    articles = pd.read_csv(r"D:\data\articles_journaux\all_articles.csv")["article"].tolist()
+    id_list = range(len(articles))
     
     train_corpus = LabeledLineSentence(articles, id_list)
     
-    model = Doc2Vec(size = 300, 
+    model = Doc2Vec(size = 500, 
                     alpha = 0.025,
                     min_alpha=0.00025,
-                    min_count=5,
-                    dm =1, workers=8)
+                    min_count=7,
+                    dm =1, 
+                    sample = 1e-4,
+                    negative = 10,
+                    window  = 15,
+                    workers=4)
     
     model.build_vocab(train_corpus)
-    model.train(train_corpus, total_examples=model.corpus_count, epochs = 15)
+    model.train(train_corpus, total_examples=model.corpus_count, epochs = 20)
    
-    
-    fname = get_tmpfile(r"C:\Users\User\Documents\Alexs\script\clustering\doc2vec_articles_181022")
+    fname = get_tmpfile(r"C:\Users\User\Documents\Alexs\data\doc2vec\v2\doc2vec_articles_181030")
     model.save(fname)
     
 def load_model():
-    fname = get_tmpfile(r"C:\Users\User\Documents\Alexs\script\clustering\doc2vec_articles_181022")
+    fname = get_tmpfile(r"C:\Users\User\Documents\Alexs\data\doc2vec\v2\doc2vec_articles_181030")
     model = Doc2Vec.load(fname) 
     return model
 
@@ -153,24 +158,32 @@ def similarity_plot(Y):
     plt.colorbar(orientation='vertical')
     plt.show()
     
-
-if __name__ == "__main__":
-    full = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\continuous_run\article\extraction_2018-10-22.csv", sep = "#")
-    full = full.loc[~pd.isnull(full["article"])]
-    full = full.drop_duplicates("url").reset_index(drop=True)     
-    articles = LabeledLineSentence(full["article"].tolist())
+def similarity_cluster(model, data, c):
+    
+    articles = data.loc[data["cluster"] == c, "article"].tolist()
     
     articl = []
     for a in articles:
         articl.append(a)
-        
-#    model = load_model()     
+    
     X = []
     for x in articl:
         X.append(model.infer_vector(x))
      
     Y = cdist(X,X, metric= "cosine")
     Y = np.round(Y, 6)
+    
+    return Y, articles
+    
+
+if __name__ == "__main__":
+    full = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\continuous_run\article\extraction_2018-10-26.csv", sep= "#")
+    full = full.loc[~pd.isnull(full["article"])]
+    full = full.drop_duplicates("url").reset_index(drop=True)     
+    articles = LabeledLineSentence(full["article"].tolist())
+    model = load_model()  
+   
+    Y, reudct = similarity_cluster(model, full, 195)
     
     methods = ["ward","single","average","complete"]
     for method in methods:
@@ -179,11 +192,22 @@ if __name__ == "__main__":
         ordered_dist_mat, res_order, res_linkage = compute_serial_matrix(Y, method)
         similarity_plot(ordered_dist_mat)
     
-#    model.docvecs.similarity_unseen_docs(model, articl[275], articl[152])
-#    resultat.loc[resultat["cluster"] == 12, "article"].tolist()
+    model.docvecs.similarity_unseen_docs(model, articl[275], articl[152])
+    resultat.loc[resultat["cluster"] == 12, "article"].tolist()
     
-
+    similarities_0 = []
+    for article_i in articl[1:]:
+        similarities_0.append(model.docvecs.similarity_unseen_docs(model, articl[0], article_i))
     
+    import hdbscan
     
+    X = []
+    for x in articles:
+        X.append(model.infer_vector(x))
+    
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=2)
+    cluster_labels = clusterer.fit_predict(X)
+    full["hdb_cluster"] = cluster_labels
+    full["hdb_cluster"].value_counts()    
     
     

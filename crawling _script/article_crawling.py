@@ -68,7 +68,8 @@ class ArticleCrawling(Crawling):
                     
             self.liste_urls = pd.merge(data[["date", "url"]],total[["url", "article"]], on ="url", how= "left")
             self.liste_urls = self.liste_urls.loc[pd.isnull(self.liste_urls["article"])][["date", "url"]]
-      
+        else:
+            total= pd.DataFrame([])
         print("total number of articles to crawl is {0} / {1}, already crawled : {2} articles".format(self.liste_urls.shape[0], shape, total.shape[0]))
     
     
