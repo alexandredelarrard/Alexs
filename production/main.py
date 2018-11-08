@@ -61,11 +61,13 @@ class Main(object):
         ### classification sujets des articles
         t0 = time.time()
         new_articles = ClassificationSujet(new_articles).main_classification_sujets()
-        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
-        new_articles.to_csv(path_name, index=False, sep='#')
         print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
-        #### push to mongodb
+        ### enregistrer articles supplementaires
+        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
+        new_articles.to_csv(path_name, index=False, sep='#')
+        
+        #### mongodb
         connection = pymongo.MongoClient(self.config.get("config-Alexs", "mongodb"))
         db=connection[self.config.get("config-Alexs", "mongo_db_name")]
         collection = db.get_collection("articles") ### ---> collection names print(db.collection_names())

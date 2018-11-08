@@ -23,10 +23,12 @@ class ClusteringArticles(object):
         with open(self.mode_path + "/parameters_classification.json", 'r') as fp:
             self.params = json.load(fp)
         
+        
     def main_classification_sujets(self):
         sentences, tok  = self.clean_articles()
         self.classification_sujets(sentences, tok)
         return self.articles
+    
     
     def clean_articles(self):
       
