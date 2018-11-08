@@ -8,7 +8,7 @@ Created on Fri Aug  3 10:55:26 2018
 
 import time
 from queue import Queue
-from production.crawling import Crawling
+from production.crawling.crawling import Crawling
 
 
 class ArticleCrawling(Crawling):

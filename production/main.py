@@ -11,10 +11,10 @@ import platform
 import time
 import datetime
 from queue import Queue
-from production.url_crawling import UrlCrawling
-from production.article_crawling import ArticleCrawling
-from production.clustering import ClusteringArticles
-import pandas as pd
+from production.crawling.url_crawling import UrlCrawling
+from production.crawling.article_crawling import ArticleCrawling
+from production.nlp.clustering import ClusteringArticles
+from production.nlp.classification import ClassificationSujet
 import pymongo
 
 
@@ -56,10 +56,15 @@ class Main(object):
         ### clustering articles
         t0 = time.time()
         new_articles = ClusteringArticles(new_articles).main_article_clustering()
-        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
-        new_articles.to_csv(path_name, index=False, sep='#')
         print("[{0}] Clustering in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
             
+        ### classification sujets des articles
+        t0 = time.time()
+        new_articles = ClassificationSujet(new_articles).main_classification_sujets()
+        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
+        new_articles.to_csv(path_name, index=False, sep='#')
+        print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
+        
         #### push to mongodb
         connection = pymongo.MongoClient(self.config.get("config-Alexs", "mongodb"))
         db=connection[self.config.get("config-Alexs", "mongo_db_name")]

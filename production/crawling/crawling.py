@@ -10,15 +10,10 @@ from selenium.webdriver.chrome.options import Options
 import pandas as pd
 import os
 import multiprocessing
-from datetime import datetime
 from queue import Queue
 from threading import Thread, get_ident
-import numpy as np
-import glob
 import random
 import time
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
 
 class Crawling(object):

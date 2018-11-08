@@ -15,7 +15,7 @@ import xml.etree.cElementTree as ET
 import requests
 warnings.filterwarnings("ignore")
 
-from production.crawling import Crawling
+from production.crawling.crawling import Crawling
 
 def environment_variables():
     configParser = configparser.RawConfigParser() 
@@ -101,12 +101,14 @@ class UrlCrawling(Crawling):
     def create_lefigaro_urls(self, sitemap):
         
         driver = self.initialize_driver()
-        new_month = str(self.today.month) if len(str(self.today.month)) ==2 else "0" + str(self.today.month)
-        urls = pd.DataFrame()
         
-        for i in range(self.today.day - 1, self.today.day + 1):
+        urls = pd.DataFrame()
+        yesterday = self.today - timedelta(days=1)
+        
+        for day, month in [(yesterday.day, yesterday.month), (self.today.day, self.today.month)]:
             url = pd.DataFrame()
-            new_day = str(i) if len(str(i)) ==2 else "0" +  str(i) 
+            new_day = str(day) if len(str(day)) ==2 else "0" +  str(day) 
+            new_month = str(month) if len(str(month)) ==2 else "0" + str(month)
             driver.get("/".join([sitemap, str(self.today.year) + new_month, new_day, ""]))
             parent = driver.find_element_by_xpath("//ul[@class='list-group']")
             liste_href = [x.get_attribute('href') for x in parent.find_elements_by_css_selector('a')]
