@@ -64,8 +64,12 @@ class UrlCrawling(Crawling):
             total_urls = pd.concat([total_urls, eval("self.create_{0}_urls(sitemap)".format(key))], axis =0)
             
         ### suppress all urls crawled last day
-        previous_urls = pd.read_csv(self.path_url+ "/{0}.csv".format((self.today - timedelta(days = 1)).strftime("%Y-%m-%d")))["url"].tolist()
-        total_urls = total_urls.loc[~total_urls["url"].isin(previous_urls)]    
+        try:
+            previous_urls = pd.read_csv(self.path_url+ "/{0}.csv".format((self.today - timedelta(days = 1)).strftime("%Y-%m-%d")))["url"].tolist()
+            total_urls = total_urls.loc[~total_urls["url"].isin(previous_urls)]   
+        except Exception:
+            pass
+        
         total_urls = total_urls.drop_duplicates("url")
         
         total_urls.to_csv(self.path_url + "/{0}.csv".format(self.today.strftime("%Y-%m-%d")), index = False)

@@ -15,7 +15,7 @@ from keras.preprocessing import sequence
 import json 
 
 
-class ClusteringArticles(object):
+class ClassificationSujet(object):
     
     def __init__(self, articles):
         self.articles = articles

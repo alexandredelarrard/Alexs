@@ -59,9 +59,9 @@ class Main(object):
         print("[{0}] Clustering in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
             
         ### classification sujets des articles
-        t0 = time.time()
-        new_articles = ClassificationSujet(new_articles).main_classification_sujets()
-        print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
+#        t0 = time.time()
+#        new_articles = ClassificationSujet(new_articles).main_classification_sujets()
+#        print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
         ### enregistrer articles supplementaires
         path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
