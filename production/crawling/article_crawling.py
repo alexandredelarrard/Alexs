@@ -90,6 +90,7 @@ class ArticleCrawling(Crawling):
             for string in queue["author"]:
                 if len(driver.find_elements_by_xpath("//" + string)) >0:
                     author += driver.find_element_by_xpath("//" + string).text 
+                    break
 
             # =============================================================================
             #             Article content

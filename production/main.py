@@ -45,12 +45,12 @@ class Main(object):
         
         #### url crawling
         t0 = time.time()
-        self.liste_urls = UrlCrawling(self.queues).main_url_crawling()
-        print("[{0}] URL Crawling in {1}s\n {2} articles to crawl".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0, self.liste_urls.shape[0]))
+        liste_urls = UrlCrawling(self.queues).main_url_crawling()
+        print("[{0}] URL Crawling in {1}s\n {2} articles to crawl".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0, liste_urls.shape[0]))
         
         #### article crawling
         t0 = time.time()
-        new_articles = ArticleCrawling(self.queues, self.liste_urls).main_article_crawling()
+        new_articles = ArticleCrawling(self.queues, liste_urls).main_article_crawling()
         print("[{0}] Article Crawling in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
         ### clustering articles
@@ -59,9 +59,9 @@ class Main(object):
         print("[{0}] Clustering in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
             
         ### classification sujets des articles
-#        t0 = time.time()
-#        new_articles = ClassificationSujet(new_articles).main_classification_sujets()
-#        print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
+        t0 = time.time()
+        new_articles = ClassificationSujet(new_articles).main_classification_sujets()
+        print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
         ### enregistrer articles supplementaires
         path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
@@ -80,12 +80,12 @@ class Main(object):
 
     def specificities(self):
 
-        self.queues["lemonde"] = {"article" :["div[@itemprop='articleBody']", "article[@class='article article_normal']", "div[@class='description']"],
+        self.queues["lemonde"] = {"article" :["div[@itemprop='articleBody']", "article[@class='article article_normal']", "div[@class='description']", "section[@class='article__content']", "section[@class='article__content article__content--restricted']"],
                                   "restricted" : ["div[@id='teaser_article']", "div[@class='Paywall']/div/div/div"],
                                   "title": ["h1[@itemprop='Headline']", "h1[@class='article__title']", "article[@class='main']/header/h1"],
-                                  "author":["span[@itemprop='author']"],
-                                  "categorie": ["nav[@id='nav_ariane']/ul/li"],
-                                  "description_article": ["p[@itemprop='description']"],
+                                  "author":["span[@itemprop='author']", "span[@itemprop='Publisher']"],
+                                  "categorie": ["nav[@id='nav_ariane']/ul/li", "ul[@class='breadcrumb']"],
+                                  "description_article": ["p[@itemprop='description']", "p[@class='article__desc']"],
                                   "not_to_crawl" : ["/live/", "/video/", "/blog-mediateur/"]}
         
         self.queues["lefigaro"] = {"article" :["div[@class='fig-content__body']", "div[@itemprop='articleBody']"],
@@ -94,7 +94,7 @@ class Main(object):
                                   "author":["a[@class='fig-content-metas__author']", "span[@itemprop='autor']"],
                                   "categorie": ["li[@class='fig-breadcrumb__item fig-breadcrumb__item--current']", "span[@itemprop='name']"],
                                   "description_article":["p[@class='fig-content__chapo']", "p[@class='fig-chapo']"],
-                                  "not_to_crawl" : ["/story/ligue1"]}
+                                  "not_to_crawl" : ["/story/", "/photos/"]}
                 
         self.queues["lesechos"] = {"article" :["div[@class='paywall']", "div[@class='main-content content-article']", "div[@itemprop='articleBody']"],
                                    "restricted": [],
@@ -150,7 +150,7 @@ class Main(object):
                                       "author":["span[@class='author']"],
                                       "categorie": ["div[@class='article-subhead']"],
                                       "description_article":["h2[@class='article-standfirst read-left-padding']","h2[@class='article-standfirst']"],
-                                      "not_to_crawl" : []}
+                                      "not_to_crawl" : ['/photographie/']}
 
 if __name__ == "__main__":
     

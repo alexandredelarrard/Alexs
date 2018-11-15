@@ -6,14 +6,14 @@ Created on Thu Oct 25 10:56:14 2018
 """
 
 import pandas as pd
-import numpy as np
 import os
 import tqdm
 from utils.clean_articles import tokenize, from_output_to_classe
 import pickle
 from keras.preprocessing import sequence
+from keras.models import model_from_json
 import json 
-
+from utils.layers import Attention
 
 class ClassificationSujet(object):
     
@@ -25,8 +25,8 @@ class ClassificationSujet(object):
         
         
     def main_classification_sujets(self):
-        sentences, tok  = self.clean_articles()
-        self.classification_sujets(sentences, tok)
+        sentences  = self.clean_articles()
+        self.classification_sujets(sentences)
         return self.articles
     
     
@@ -48,11 +48,22 @@ class ClassificationSujet(object):
         with open(self.mode_path + '/tokenizer.pickle', 'rb') as handle:
             tok = pickle.load(handle)
             
-        model = np.load(self.mode_path + '/model_weights_0.pny')
+        # load json and create model
+        json_file = open(self.mode_path + '/model.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        loaded_model = model_from_json(loaded_model_json, custom_objects={'Attention': Attention, "step_dim" : 500})
+        loaded_model.load_weights(self.mode_path + '/model_weights_0.h5')
+            
         new_phrases = tok.texts_to_sequences(sentences)
         new_phrases = sequence.pad_sequences(new_phrases, maxlen=self.params['maxlen'])
-        y = model.predict(new_phrases, batch_size = self.params["batch_size"]*2)
+        y = loaded_model.predict(new_phrases, batch_size = self.params["batch_size"]*2)
         self.articles["sujets"] = from_output_to_classe(y, self.params["classes"])
         
-        
+ 
+if __name__ == "__main__":
+    articles = pd.read_csv(r"C:\Users\User\Documents\Alexs\data\continuous_run\article\extraction_2018-11-11.csv", sep = "#")
+    art = ClassificationSujet(articles).main_classification_sujets()
+    print(art["sujets"].astype(str).value_counts())
+
     
