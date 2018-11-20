@@ -110,15 +110,19 @@ class UrlCrawling(Crawling):
         yesterday = self.today - timedelta(days=1)
         
         for day, month in [(yesterday.day, yesterday.month), (self.today.day, self.today.month)]:
-            url = pd.DataFrame()
-            new_day = str(day) if len(str(day)) ==2 else "0" +  str(day) 
-            new_month = str(month) if len(str(month)) ==2 else "0" + str(month)
-            driver.get("/".join([sitemap, str(self.today.year) + new_month, new_day, ""]))
-            parent = driver.find_element_by_xpath("//ul[@class='list-group']")
-            liste_href = [x.get_attribute('href') for x in parent.find_elements_by_css_selector('a')]
-            url["url"] = liste_href
-            url["date"] = pd.to_datetime("/".join([str(self.today.year) , new_month, new_day]))
-            urls = pd.concat([urls,url],axis=0)
+            try:
+                url = pd.DataFrame()
+                new_day = str(day) if len(str(day)) ==2 else "0" +  str(day) 
+                new_month = str(month) if len(str(month)) ==2 else "0" + str(month)
+                
+                driver.get("/".join([sitemap, str(self.today.year) + new_month, new_day, ""]))
+                parent = driver.find_element_by_xpath("//ul[@class='list-group']")
+                liste_href = [x.get_attribute('href') for x in parent.find_elements_by_css_selector('a')]
+                url["url"] = liste_href
+                url["date"] = pd.to_datetime("/".join([str(self.today.year) , new_month, new_day]))
+                urls = pd.concat([urls,url],axis=0)
+            except Exception:
+                pass
         driver.quit()
         
         return urls

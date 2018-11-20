@@ -33,6 +33,7 @@ class Main(object):
     
     def __init__(self):
         
+        self.analytics = False
         self.config = environment_variables()
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}        
         self.specificities()
@@ -43,15 +44,20 @@ class Main(object):
         
         time_tot = time.time()
         
-        #### url crawling
-        t0 = time.time()
-        liste_urls = UrlCrawling(self.queues).main_url_crawling()
-        print("[{0}] URL Crawling in {1}s\n {2} articles to crawl".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0, liste_urls.shape[0]))
+        if not self.analytics:
+            #### url crawling
+            t0 = time.time()
+            liste_urls = UrlCrawling(self.queues).main_url_crawling()
+            print("[{0}] URL Crawling in {1}s\n {2} articles to crawl".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0, liste_urls.shape[0]))
+            
+            #### article crawling
+            t0 = time.time()
+            new_articles = ArticleCrawling(self.queues, liste_urls).main_article_crawling()
+            print("[{0}] Article Crawling in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
-        #### article crawling
-        t0 = time.time()
-        new_articles = ArticleCrawling(self.queues, liste_urls).main_article_crawling()
-        print("[{0}] Article Crawling in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
+        else:
+            import pandas as pd
+            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%datetime.datetime.today().strftime("%Y-%m-%d"), sep = "#")
         
         ### clustering articles
         t0 = time.time()
@@ -63,9 +69,10 @@ class Main(object):
         new_articles = ClassificationSujet(new_articles).main_classification_sujets()
         print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
-        ### enregistrer articles supplementaires
-        path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
-        new_articles.to_csv(path_name, index=False, sep='#')
+        if not self.analytics:
+            ### enregistrer articles supplementaires
+            path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
+            new_articles.to_csv(path_name, index=False, sep='#')
         
         #### mongodb
         connection = pymongo.MongoClient(self.config.get("config-Alexs", "mongodb"))
@@ -153,5 +160,5 @@ class Main(object):
                                       "not_to_crawl" : ['/photographie/']}
 
 if __name__ == "__main__":
-    
+     os.environ["DIR_PATH"] = r"C:\Users\User\Documents\Alexs"
      m = Main() 

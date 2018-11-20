@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Created on Thu Nov  8 21:14:25 2018
 
@@ -35,7 +35,7 @@ def load_doc2vec_model():
 
 
 def from_output_to_classe(y, classes):
-    yp = np.where(y >= 0.4, 1, 0)
+    yp = np.where(y >= 0.75, 1, 0)
     pred = [list(itertools.chain(*l.tolist())) for l in list(map(lambda x : np.argwhere(x == np.amax(x)), yp))]
     
     predictions = []
