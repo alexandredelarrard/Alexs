@@ -16,7 +16,7 @@ from production.crawling.article_crawling import ArticleCrawling
 from production.nlp.clustering import ClusteringArticles
 from production.nlp.classification import ClassificationSujet
 import pymongo
-
+from datetime import timedelta
 
 def environment_variables():
     configParser = configparser.RawConfigParser() 
@@ -33,7 +33,7 @@ class Main(object):
     
     def __init__(self):
         
-        self.analytics = False
+        self.analytics = True
         self.config = environment_variables()
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}        
         self.specificities()
@@ -57,7 +57,7 @@ class Main(object):
         
         else:
             import pandas as pd
-            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%datetime.datetime.today().strftime("%Y-%m-%d"), sep = "#")
+            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%(datetime.datetime.today()-timedelta(days=1)).strftime("%Y-%m-%d"), sep = "#")
         
         ### clustering articles
         t0 = time.time()
