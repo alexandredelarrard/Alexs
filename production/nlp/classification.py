@@ -36,7 +36,7 @@ class ClassificationSujet(object):
         self.articles = self.articles.loc[~pd.isnull(self.articles["article"])]
         self.articles = self.articles.loc[~pd.isnull(self.articles["restricted"])]
         a = self.articles["article"].apply(lambda x : len(x))
-        self.articles = self.articles.loc[a>100]
+        self.articles = self.articles.loc[a>750]
         
         sentences = []
         for art in tqdm.tqdm(self.articles["article"].tolist()):

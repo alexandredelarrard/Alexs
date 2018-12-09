@@ -33,7 +33,7 @@ class Main(object):
     
     def __init__(self):
         
-        self.analytics = True
+        self.analytics = False
         self.config = environment_variables()
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}        
         self.specificities()
@@ -58,6 +58,7 @@ class Main(object):
         else:
             import pandas as pd
             new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%(datetime.datetime.today()-timedelta(days=1)).strftime("%Y-%m-%d"), sep = "#")
+#            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_2018-12-05.csv", sep = "#")
         
         ### clustering articles
         t0 = time.time()
@@ -87,7 +88,8 @@ class Main(object):
 
     def specificities(self):
 
-        self.queues["lemonde"] = {"article" :["div[@itemprop='articleBody']", "article[@class='article article_normal']", "div[@class='description']", "section[@class='article__content']", "section[@class='article__content article__content--restricted']"],
+        self.queues["lemonde"] = {"article" :["div[@itemprop='articleBody']", "article[@class='article article_normal']", "div[@class='description']", "section[@class='article__content']", "section[@class='article__content article__content--restricted']", 
+                                  "section[@class='article__content article__content--restricted-media']"],
                                   "restricted" : ["div[@id='teaser_article']", "div[@class='Paywall']/div/div/div"],
                                   "title": ["h1[@itemprop='Headline']", "h1[@class='article__title']", "article[@class='main']/header/h1"],
                                   "author":["span[@itemprop='author']", "span[@itemprop='Publisher']"],
