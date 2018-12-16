@@ -11,12 +11,14 @@ import platform
 import time
 import datetime
 from queue import Queue
+import pymongo
+from datetime import timedelta
+
 from production.crawling.url_crawling import UrlCrawling
 from production.crawling.article_crawling import ArticleCrawling
 from production.nlp.clustering import ClusteringArticles
 from production.nlp.classification import ClassificationSujet
-import pymongo
-from datetime import timedelta
+
 
 def environment_variables():
     configParser = configparser.RawConfigParser() 
@@ -33,7 +35,7 @@ class Main(object):
     
     def __init__(self):
         
-        self.analytics = False
+        self.analytics = True
         self.config = environment_variables()
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}        
         self.specificities()
@@ -57,33 +59,51 @@ class Main(object):
         
         else:
             import pandas as pd
-            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%(datetime.datetime.today()-timedelta(days=1)).strftime("%Y-%m-%d"), sep = "#")
+            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%(datetime.datetime.today()-timedelta(days=0)).strftime("%Y-%m-%d"), sep = "#")
 #            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_2018-12-05.csv", sep = "#")
         
         ### clustering articles
         t0 = time.time()
-        new_articles = ClusteringArticles(new_articles).main_article_clustering()
+        new_articles, new_clusters = ClusteringArticles(new_articles).main_article_clustering()
         print("[{0}] Clustering in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
             
         ### classification sujets des articles
         t0 = time.time()
-        new_articles = ClassificationSujet(new_articles).main_classification_sujets()
+        new_articles, new_clusters = ClassificationSujet(new_articles, new_clusters).main_classification_sujets()
         print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
         if not self.analytics:
             ### enregistrer articles supplementaires
             path_name = "/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "extraction_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]) 
             new_articles.to_csv(path_name, index=False, sep='#')
-        
+                                
+        new_clusters = pd.DataFrame.from_dict(new_clusters, orient='index') #.to_csv("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "cluster_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]), index=False, sep='#')
+       
         #### mongodb
         connection = pymongo.MongoClient(self.config.get("config-Alexs", "mongodb"))
         db=connection[self.config.get("config-Alexs", "mongo_db_name")]
-        collection = db.get_collection("articles") ### ---> collection names print(db.collection_names())
-        new_articles = new_articles.to_dict(orient='records')
-        collection.delete_many({})
-        collection.insert_many(new_articles)
+        
+        collection_articles = db.get_collection("articles") 
+        collection_articles.delete_many({})
+        collection_articles.insert_many(new_articles.to_dict(orient='records'))
+        
+        collection_clusters = db.get_collection("clusters")
+        collection_clusters.delete_many({})
+        collection_clusters.insert_many(new_clusters.to_dict(orient='records'))
         
         print("total updating time {0}s".format(time.time() - time_tot))
+
+
+    def getCollectionKeys(collection):
+        """Get a set of keys from a collection"""
+        
+        keys_list = []
+        collection_list = collection.find()
+        for document in collection_list:
+            for field in document.keys():
+                keys_list.append(field)
+        keys_set =  set(keys_list)
+        return keys_set
 
 
     def specificities(self):
