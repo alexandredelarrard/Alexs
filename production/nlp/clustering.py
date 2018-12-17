@@ -78,12 +78,12 @@ class ClusteringArticles(object):
         # =============================================================================
         total = {}
         titres = []
-        for item in articles["cluster"].value_counts().index:
-            sub_cluster = articles.loc[articles["cluster"] == item]
+        for item in self.articles["cluster"].value_counts().index:
+            sub_cluster = self.articles.loc[self.articles["cluster"] == item]
             titres.append(sub_cluster["titre"].iloc[0])
             cluster_words, tfs3 = weight_words(sub_cluster, nwords = 100, token= False)
             total[item] = {"mot_cles" : get_top_k_words_cluster(cluster_words)[-5:].index.tolist(),
-                           "cluster" : str(item),
+                           "cluster" : item,
                            "titre" : sub_cluster["titre"].iloc[0],
                            "nbr_articles" : sub_cluster.shape[0]}
         return total

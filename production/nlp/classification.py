@@ -8,7 +8,7 @@ Created on Thu Oct 25 10:56:14 2018
 import pandas as pd
 import os
 import tqdm
-from utils.clean_articles import tokenize, from_output_to_classe
+from utils.clean_articles import classification_tokenize, from_output_to_classe
 import pickle
 from keras.preprocessing import sequence
 from keras.models import model_from_json
@@ -36,7 +36,7 @@ class ClassificationSujet(object):
     def clean_articles(self):
         sentences = []
         for art in tqdm.tqdm(self.articles["article"].tolist()):
-            sentences.append(tokenize(art))
+            sentences.append(classification_tokenize(art))
         return sentences
     
     
