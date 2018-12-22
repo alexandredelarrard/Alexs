@@ -25,14 +25,6 @@ def error_handler(text):
     text = re.sub(r'http\S+', '', text, flags=re.MULTILINE) # remove web addresses
     text = re.sub(r'\(Crédits :.+\)\r\n', ' ', text, flags=re.MULTILINE) # remove credits from start of article
     text = re.sub(r'\r\n.+\r\nVoir les réactions', '', text, flags=re.MULTILINE) # remove credits from start of article
-    text = text.replace("/ REUTERS", "").replace("/ AFP", "").replace("%", " pourcent ").replace("TF1", " chaine television ")\
-                .replace(" EI ", " Etat Islamique ").replace("1er","premier").replace(" CO2 "," dioxyde de carbone ").replace("n°"," numero ")\
-                .replace(" 1ère "," premiere ").replace(' km² '," kilometre carre ").replace('m²'," metre carre ").replace('°C'," degre celcius ")\
-                .replace("€"," euro ").replace("CAC40", " indice boursier ").replace("nyse", " new york stock exchange ").replace("macronie", " macron ")\
-                .replace("NatIxis"," Natixis ").replace("Ligue1", " ligue un").replace("Ã§", "c").replace("Ã©", "é").replace("Ã¨", "è").replace('brexiters', "brexit ") \
-                .replace(" \x92", " ").replace(" \xad", " ").replace("lrem", "la republique en marche").replace("LREM", "la republique en marche").replace('lfi', "la France insoumise").replace("LaREM", "la republique en marche")\
-                .replace("gafa", " Google Apple Facebook Amazone ").replace("PS2", " console de jeu ").replace('Parcoursup'," parcours supérieur").replace("FESF", " Fonds européen de stabilité financière ")\
-                .replace("OSDH", "Observatoire syrien des droits de l'homme")
     s = text.split("(Reuters) - ",1)
     if len(s)>1:
         text = s[1]
@@ -49,16 +41,25 @@ def error_handler(text):
     text = re.sub(r'www.\S+', '', text, flags=re.MULTILINE) # remove web addresses
     text = re.sub(r'\r\n» Vous pouvez également suivre.+.', '', text, flags=re.MULTILINE) 
     text = re.sub(r'\r\nLIRE NOTRE DOSSIER COMPLET\r\n.+\r\n', '', text, flags=re.MULTILINE) 
-    
-    text = text.replace("\r\nLIRE AUSSI :\r\n»", "")
     text = text.replace("(Reuters)", "").replace("Article réservé aux abonnés", " ")
+    text = text.replace("\r\nLIRE AUSSI :\r\n»", "").lower()
+    text = text.translate({ord(ch): " " for ch in "🏆-•“’\”!\"#$&()*+,./:;<=>?@[\\]^_`{|}~«»–…‘'"}) # lower + suppress numbers
+    
+    text = text.replace("/ reuters", " ").replace("/ afp", " ").replace("%", " pourcent ").replace("tf1", " chaine television ")\
+                .replace(" ei ", " etat islamique ").replace("1er","premier").replace(" co2 "," dioxyde de carbone ").replace("n°"," numero ")\
+                .replace(" 1ère "," premiere ").replace(' km² '," kilometre carre ").replace('m²'," metre carre ").replace('°c'," degre celcius ")\
+                .replace("€"," euro ").replace("cac40", " indice boursier ").replace(" nyse ", " new york stock exchange ").replace(" macronie ", " macron ")\
+                .replace("ligue1", " ligue un").replace("Ã´", "ô").replace("Ã§", "c").replace("Ã©", "é").replace("Ã¨", "è").replace(' brexiters ', "brexit") \
+                .replace("\x92", " ").replace("\xad", "").replace(" lrem ", "la republique en marche").replace(' lfi ', " la France insoumise ")\
+                .replace(" gafa ", " google apple facebook amazone ").replace("ps2", " console de jeu ").replace(' parcoursup '," parcours supérieur").replace("fesf", " fonds européen de stabilité financière ")\
+                .replace(" osdh ", " observatoire syrien des droits de l'homme ").replace("(reuters)", "").replace("article réservé aux abonnés", " ").replace('insoumisee', 'insoumise')\
+                .replace(" ftse ", " indice boursier ")
     return text
     
 
 def tokenize(text):
     text = error_handler(text)
     text = text.translate({ord(ch): None for ch in '0123456789'})
-    text = text.translate({ord(ch): " " for ch in '-•“’!"#$%&()*+,./:;<=>?@[\\]^_`{|}~«»–…‘'}) # lower + suppress numbers
     text = re.sub(r' +', ' ', text, flags=re.MULTILINE) # remove autor name
     text = re.sub(r' \b[a-zA-Z]\b ', ' ', text, flags=re.MULTILINE) ### mono letters word
     tokens = nltk.word_tokenize(text.lower(), language='french')  
@@ -68,10 +69,9 @@ def tokenize(text):
 
 def classification_tokenize(text):
     text = error_handler(text)
-    text = text.translate({ord(ch): '0' for ch in '0123456789'})
-    text = text.translate({ord(ch): " " for ch in "🏆-•“’\”!\"#$&()*+,./:;<=>?@[\\]^_`{|}~«»–…‘'"})
-    text = re.sub(r' +', ' ', text, flags=re.MULTILINE) 
+    text = text.translate({ord(ch): ' ' for ch in '0123456789'})
     text = re.sub(r' \b[a-zA-Z]\b ', ' ', text, flags=re.MULTILINE) ### mono letters word
+    text = re.sub(r' +', ' ', text, flags=re.MULTILINE) 
     
     liste_words = []
     for x in text.split():
@@ -92,13 +92,15 @@ def load_doc2vec_model():
 def from_output_to_classe(y, classes):
     yp = np.where(y >= 0.5, 1, 0)
     
-#    yp1 = np.zeros((y.shape[0], y.shape[1]))
-#    maxi = np.argmax(y,axis=1)
-#    for index in range(y.shape[0]):
-#        yp1[index, maxi[index]] = 1
-#    
-#    index = np.sum(yp, axis=1) ==0
-#    yp[index, :] = yp1[index, :]
+    ### always make a prediction
+    yp1 = np.zeros((y.shape[0], y.shape[1]))
+    maxi = np.argmax(y,axis=1)
+    for index in range(y.shape[0]):
+        yp1[index, maxi[index]] = 1
+    
+    index = np.sum(yp, axis=1) ==0
+    yp[index, :] = yp1[index, :]
+    ## fin
     
     pred = [list(itertools.chain(*l.tolist())) for l in list(map(lambda x : np.argwhere(x == np.amax(x)), yp))]
     

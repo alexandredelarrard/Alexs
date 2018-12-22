@@ -8,6 +8,9 @@ Created on Sun Nov 11 19:54:41 2018
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras import initializers, regularizers, constraints
+from keras.models import model_from_json
+import json 
+import pickle
 
 class Attention(Layer):
     def __init__(self, step_dim = 500,
@@ -74,4 +77,22 @@ class Attention(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape[0],  self.features_dim
+    
+
+def load_information(mode_path = r'C:\Users\User\Documents\Alexs\data\models\classification'):
+    
+    with open(mode_path + "/parameters_classification.json", 'r') as fp:
+         params = json.load(fp)
+         
+    json_file = open(mode_path + '/model.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json, custom_objects={'Attention': Attention})
+    loaded_model.load_weights(mode_path + '/model_weights_0.h5')
+    
+    with open(r'C:\Users\User\Documents\Alexs\data\models\classification/tokenizer.pickle', 'rb') as handle:
+            tok = pickle.load(handle)
+            
+    return tok, loaded_model, params
+
     

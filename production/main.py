@@ -13,6 +13,7 @@ import datetime
 from queue import Queue
 import pymongo
 from datetime import timedelta
+import pandas as pd
 
 from production.crawling.url_crawling import UrlCrawling
 from production.crawling.article_crawling import ArticleCrawling
@@ -35,7 +36,7 @@ class Main(object):
     
     def __init__(self):
         
-        self.analytics = True
+        self.analytics = False
         self.config = environment_variables()
         self.queues = {"drivers": Queue(), "urls" :  Queue(), "results": Queue()}        
         self.specificities()
@@ -47,30 +48,41 @@ class Main(object):
         time_tot = time.time()
         
         if not self.analytics:
-            #### url crawling
+# =============================================================================
+#             #### url crawling
+# =============================================================================
             t0 = time.time()
             liste_urls = UrlCrawling(self.queues).main_url_crawling()
             print("[{0}] URL Crawling in {1}s\n {2} articles to crawl".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0, liste_urls.shape[0]))
             
-            #### article crawling
+# =============================================================================
+#             #### article crawling
+# =============================================================================
             t0 = time.time()
             new_articles = ArticleCrawling(self.queues, liste_urls).main_article_crawling()
             print("[{0}] Article Crawling in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
         
         else:
-            import pandas as pd
             new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_%s.csv"%(datetime.datetime.today()-timedelta(days=0)).strftime("%Y-%m-%d"), sep = "#")
 #            new_articles = pd.read_csv(os.environ["DIR_PATH"] + "/data/continuous_run/article/extraction_2018-12-05.csv", sep = "#")
         
-        ### clustering articles
+# =============================================================================
+#         ### clustering articles
+# =============================================================================
         t0 = time.time()
         new_articles, new_clusters = ClusteringArticles(new_articles).main_article_clustering()
         print("[{0}] Clustering in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
             
-        ### classification sujets des articles
-        t0 = time.time()
-        new_articles, new_clusters = ClassificationSujet(new_articles, new_clusters).main_classification_sujets()
-        print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
+# =============================================================================
+#         ### classification sujets des articles
+# =============================================================================
+        try:
+            t0 = time.time()
+            new_articles, new_clusters = ClassificationSujet(new_articles, new_clusters).main_classification_sujets()
+            print("[{0}] Classification sujets in {1}s\n".format(datetime.datetime.today().strftime("%Y-%m-%d"), time.time() - t0))
+        except Exception as e:
+            print(e)
+            pass
         
         if not self.analytics:
             ### enregistrer articles supplementaires
@@ -79,7 +91,9 @@ class Main(object):
                                 
         new_clusters = pd.DataFrame.from_dict(new_clusters, orient='index') #.to_csv("/".join([os.environ["DIR_PATH"], "data", "continuous_run", "article", "cluster_{0}.csv".format(datetime.datetime.now().strftime("%Y-%m-%d"))]), index=False, sep='#')
        
-        #### mongodb
+# =============================================================================
+#         #### mongodb
+# =============================================================================
         connection = pymongo.MongoClient(self.config.get("config-Alexs", "mongodb"))
         db=connection[self.config.get("config-Alexs", "mongo_db_name")]
         
