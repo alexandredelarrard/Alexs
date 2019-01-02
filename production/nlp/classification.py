@@ -8,8 +8,10 @@ Created on Thu Oct 25 10:56:14 2018
 import pandas as pd
 import os
 import tqdm
-from utils.clean_articles import classification_tokenize, from_output_to_classe
+import numpy as np
 from keras.preprocessing import sequence
+
+from utils.clean_articles import classification_tokenize, from_output_to_classe
 from utils.layers import load_information
 
 class ClassificationSujet(object):
@@ -21,8 +23,8 @@ class ClassificationSujet(object):
         
         
     def main_classification_sujets(self):
-        self.classification_sujets()
-        self.classification_per_cluster()
+        y = self.classification_sujets()
+        self.classification_per_cluster(y)
         return self.articles, self.clusters
     
     
@@ -34,24 +36,19 @@ class ClassificationSujet(object):
         new_phrases = sequence.pad_sequences(new_phrases, maxlen=self.params['maxlen'])
         y = self.loaded_model.predict(new_phrases, batch_size = self.params["batch_size"])
         self.articles["sujets"] = from_output_to_classe(y, self.params["classes"])
+    
+        return y
         
         
-    def classification_per_cluster(self):
+    def classification_per_cluster(self, y):
         
         cluster_big_article = []
         for cluster in self.clusters.keys():
-            sub_data = self.articles.loc[self.articles["cluster"] == cluster]
-            art = ""
-            for k in range(sub_data.shape[0]):
-                art += sub_data.iloc[k]["article"] + " "
-            cluster_big_article.append(art)
-        
-        sentences  = self.clean_articles(cluster_big_article)
-        new_phrases = self.tok.texts_to_sequences(sentences)
-        new_phrases = sequence.pad_sequences(new_phrases, maxlen=self.params['maxlen'])
-        y = self.loaded_model.predict(new_phrases, batch_size = self.params["batch_size"])
-        sujets = from_output_to_classe(y, self.params["classes"])
-        
+            index_y = self.articles.loc[self.articles["cluster"] == cluster].index
+            yy = y[index_y,:].mean(axis=0)
+            cluster_big_article.append(yy)
+
+        sujets = from_output_to_classe(np.array(cluster_big_article), self.params["classes"])
         for i, cluster in enumerate(self.clusters.keys()):
             self.clusters[cluster]["sujets"] = sujets[i]
         

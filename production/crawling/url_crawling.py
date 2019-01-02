@@ -45,7 +45,7 @@ class UrlCrawling(Crawling):
                     "liberation" :"https://www.liberation.fr/liberation/daily-sitemap.xml",# par jour 
                     "lexpress": "https://www.lexpress.fr/sitemap_actu_1.xml",# par jour 
                     "humanite": "https://www.humanite.fr/sitemap.xml",# several years
-#                    "parisien": "http://www.leparisien.fr/sitemap_news_1.xml", # 1 semaine
+                    "parisien": "http://www.leparisien.fr/sitemap_news_1.xml", # 1 semaine
                     "latribune": "https://www.latribune.fr/toute-l-actualite/toute-l-actualite.html"}
         
         return sitemaps_url
